@@ -70,7 +70,7 @@ SafeBite solves this multi-sided problem with a single scan.
 
 | Layer | Technology |
 |-------|-----------|
-| **Mobile Frontend** | React Native (Expo 53), TypeScript, expo-router |
+| **Mobile Frontend** | React Native (Expo 54), TypeScript, expo-router |
 | **Styling** | NativeWind (Tailwind CSS), React Native Reanimated |
 | **Backend** | Node.js + Express.js (deployed on Render) |
 | **AI** | Groq API — llama-3.1-8b-instant & llama3-70b-8192 |
