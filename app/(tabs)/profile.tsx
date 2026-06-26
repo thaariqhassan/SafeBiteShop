@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { getActiveProfile } from "@/app/services/familyProfile";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -30,6 +31,16 @@ const profile = () => {
   const [cust, setCust] = React.useState<any>(null);
   const [users, setUsers] = React.useState<any>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
+  const [activeProfileName, setActiveProfileName] = useState<string>("");
+  const [isProfileSelf, setIsProfileSelf] = useState(true);
+
+  useEffect(() => {
+    getActiveProfile().then((p) => {
+      setActiveProfileName(p.name);
+      setIsProfileSelf(p.isSelf);
+    });
+  }, []);
+
   useEffect(() => {
     const fetchD = async () => {
       setLoading(true);
@@ -106,6 +117,32 @@ const profile = () => {
             <Ionicons name={"mail-outline"} size={22} color={"#007b00"} />
             <Text className="text-center font-bold">{user?.user?.email}</Text>
           </View>
+
+          <TouchableOpacity
+            onPress={() => router.push("/family")}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              backgroundColor: isProfileSelf ? "#f0fdf4" : "#fefce8",
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              width: "100%",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons
+                name={isProfileSelf ? "person-outline" : "people-outline"}
+                size={16}
+                color={isProfileSelf ? "#15803d" : "#92400e"}
+              />
+              <Text style={{ fontWeight: "600", color: isProfileSelf ? "#15803d" : "#92400e", fontSize: 13 }}>
+                Scanning as: {activeProfileName || "You"}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: "#6b7280" }}>Manage Family →</Text>
+          </TouchableOpacity>
 
           <Text className="text-center font-bold underline">Allergies</Text>
           <View className="flex-row flex-wrap justify-center">

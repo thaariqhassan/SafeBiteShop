@@ -40,6 +40,7 @@ const ProductSummary = () => {
   const [summaryData, setSummaryData] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState<boolean>(true);
   const [medicationWarnings, setMedicationWarnings] = useState<MedicationWarning[]>([]);
+  const [profileName, setProfileName] = useState<string>("");
   const [logged, setLogged] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
 
@@ -98,6 +99,7 @@ const ProductSummary = () => {
         const result = await handleSummary(summData);
         setSummaryData(result.summary);
         setMedicationWarnings(result.medicationWarnings);
+        setProfileName(result.profileName);
         setSummaryLoading(false);
       }
     };
@@ -271,6 +273,24 @@ const ProductSummary = () => {
                 </Text>
               </View>
             )}
+            {profileName ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#f0fdf4",
+                  borderRadius: 8,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  marginTop: 12,
+                  alignSelf: "flex-start",
+                }}
+              >
+                <Text style={{ fontSize: 12, color: "#166534" }}>
+                  👤 Scanning for: <Text style={{ fontWeight: "700" }}>{profileName}</Text>
+                </Text>
+              </View>
+            ) : null}
             <View className="mt-5">
               <Text className="text-lg font-semibold text-gray-800 mb-2">
                 AI Summary

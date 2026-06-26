@@ -1,42 +1,43 @@
 import { ProductData } from "../product/[id]";
-import { supabase } from "@/lib/supabase";
 import { checkMedicationInteractions, MedicationWarning } from "@/constants/medicationInteractions";
+import { getActiveProfile } from "./familyProfile";
 
 export interface SummaryResult {
   summary: string | null;
   medicationWarnings: MedicationWarning[];
+  profileName: string;
 }
 
 const handleSummary = async (productData: ProductData): Promise<SummaryResult> => {
   try {
-    const { data: user } = await supabase.auth.getUser();
-    const { data } = await supabase
-      .from("Customerdetails")
-      .select()
-      .eq("id", user?.user?.id);
-
-    const allergies = data?.[0]?.allergies ?? [];
-    const conditions = data?.[0]?.medical_conditions ?? [];
-    const medications: string[] = data?.[0]?.medications ?? [];
+    const profile = await getActiveProfile();
 
     const medicationWarnings = checkMedicationInteractions(
       productData.ingredients,
-      medications
+      profile.medications
     );
 
     const res = await fetch("https://safebite-28tg.onrender.com/api/summary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userProfile: { allergies, conditions, medications },
+        userProfile: {
+          allergies: profile.allergies,
+          conditions: profile.medical_conditions,
+          medications: profile.medications,
+        },
         productData,
       }),
     });
     const result = await res.json();
-    return { summary: result.summary ?? null, medicationWarnings };
+    return {
+      summary: result.summary ?? null,
+      medicationWarnings,
+      profileName: profile.name,
+    };
   } catch (error) {
     console.error("Error handling summary:", error);
-    return { summary: null, medicationWarnings: [] };
+    return { summary: null, medicationWarnings: [], profileName: "You" };
   }
 };
 
