@@ -12,7 +12,7 @@ import {
   deleteLog,
   getTodayLogs,
   NutritionLogEntry,
-} from "../_services/nutritionLog";
+} from "@/services/nutritionLog";
 import {
   getNutritionLimits,
   NutritionLimit,

@@ -16,7 +16,7 @@ import {
   getActiveProfileId,
   getFamilyMembers,
   setActiveProfileId,
-} from "./_services/familyProfile";
+} from "@/services/familyProfile";
 import {
   commonAllergies,
   commonMedications,

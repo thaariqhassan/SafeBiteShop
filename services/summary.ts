@@ -1,4 +1,4 @@
-import { ProductData } from "../product/[id]";
+import { ProductData } from "@/app/product/[id]";
 import { checkMedicationInteractions, MedicationWarning } from "@/constants/medicationInteractions";
 import { getActiveProfile } from "./familyProfile";
 

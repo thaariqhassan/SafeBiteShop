@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { getActiveProfile } from "@/app/_services/familyProfile";
+import { getActiveProfile } from "@/services/familyProfile";
 import {
   ActivityIndicator,
   StyleSheet,

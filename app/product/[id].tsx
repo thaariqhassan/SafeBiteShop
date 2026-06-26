@@ -8,10 +8,10 @@ import {
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
-import handleSummary, { SummaryResult } from "../_services/summary";
+import handleSummary, { SummaryResult } from "@/services/summary";
 import { MedicationWarning } from "@/constants/medicationInteractions";
-import { logNutrition } from "../_services/nutritionLog";
-import { cacheProduct, getCachedProduct, updateCachedSummary } from "../_services/scanCache";
+import { logNutrition } from "@/services/nutritionLog";
+import { cacheProduct, getCachedProduct, updateCachedSummary } from "@/services/scanCache";
 
 export interface ProductData {
   product_name: string;
