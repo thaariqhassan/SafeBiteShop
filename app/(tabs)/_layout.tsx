@@ -11,36 +11,26 @@ const TabIcon = ({
   title: string;
   icon: keyof typeof Ionicons.glyphMap;
 }) => (
-  <>
-    {focused ? (
-      <View className="flex-row items-center justify-center px-2 min-h-16 mt-5 rounded-full overflow-hidden">
-        <Ionicons
-          name={
-            focused
-              ? icon
-              : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
-          }
-          size={20}
-          color={"#fde047"}
-        />
-        <Text className="text-sm text-[#fdeb84] ml-1.5 font-semibold">
-          {title}
-        </Text>
-      </View>
-    ) : (
-      <View className="items-center justify-center px-2 min-h-16 mt-5 rounded-full overflow-hidden">
-        <Ionicons
-          name={
-            focused
-              ? icon
-              : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
-          }
-          size={20}
-          color={"#ffffff"}
-        />
-      </View>
-    )}
-  </>
+  <View style={{ alignItems: "center", justifyContent: "center", width: 64 }}>
+    <Ionicons
+      name={
+        focused ? icon : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
+      }
+      size={focused ? 24 : 18}
+      color={focused ? "#fde047" : "#ffffff"}
+    />
+    <Text
+      numberOfLines={1}
+      style={{
+        fontSize: 11,
+        marginTop:2,
+        fontWeight: focused ? "700" : "500",
+        color: focused ? "#fde047" : "#cfe8cf",
+      }}
+    >
+      {title}
+    </Text>
+  </View>
 );
 const _layout = () => {
   return (
@@ -55,11 +45,16 @@ const _layout = () => {
         },
         tabBarStyle: {
           backgroundColor: "#004d00",
-          borderRadius: 50,
+          borderRadius: 30,
           position: "absolute",
-          height: 54,
+          height: 55,
           marginHorizontal: 16,
-          marginBottom: 40,
+          marginBottom: 24,
+          paddingTop: 5,
+          borderWidth: 2,
+          borderColor: "#fde047",
+          borderTopWidth: 2,
+          borderTopColor: "#fde047",
           overflow: "hidden",
         },
       }}
