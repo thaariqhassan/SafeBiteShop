@@ -2,67 +2,72 @@
 
 > **Scan Smart. Eat Safe. Live Well.**
 
-SafeBite is a mobile-first HealthTech application built with React Native. Scan any packaged food barcode to get an AI-powered safety analysis personalised to your medical profile — covering allergies, chronic conditions, medications, and your whole family.
+SafeBite is a mobile-first HealthTech app built with React Native. Scan a barcode, **snap an ingredients label with no barcode at all**, or **photograph a restaurant menu** — and get an AI-powered safety analysis personalised to your medical profile: allergies, chronic conditions, medications, and your whole family.
+
+What makes SafeBite different: it checks food against your **medications and conditions**, not just calories — and it works even when a product isn't in any barcode database.
 
 ---
 
 ## 💡 Problem Statement
 
-In today's fast-paced world, ensuring food safety is challenging for both **consumers** and **shopkeepers**:
+Ensuring food safety is hard for both **consumers** and **shopkeepers**:
 
-- Consumers with **allergies**, **diabetes**, **heart disease**, or other conditions often lack the means to verify whether a food item is safe for them.
-- People on **medication** are unaware of dangerous food-drug interactions hiding in everyday products.
-- Families have no easy way to check food safety across **multiple health profiles** in a single scan.
-- Shopkeepers frequently overlook **expiry management**, causing waste and posing health risks.
+- People with **allergies**, **diabetes**, **heart disease** or other conditions can't easily verify whether a food is safe for them.
+- People on **medication** are unaware of dangerous food–drug interactions hiding in everyday products.
+- Most barcode scanners hit a dead end when a product **isn't in the database** — common for local, loose, or small-brand foods.
+- **Eating out** is the scariest scenario for allergy/medication users, with no easy way to vet a menu.
+- Families have no way to check safety across **multiple health profiles** in one scan.
+- Shopkeepers overlook **stock and expiry management**, causing waste and risk.
 
-> According to WHO, anaphylaxis-related deaths are on the rise — from 0.51 to 0.76 per million annually. SafeBite puts clinical-grade food safety in everyone's hands.
-
----
-
-## 🎯 Approach & Solution
-
-SafeBite solves this multi-sided problem with a single scan.
-
-### 🔹 For Consumers
-
-- 📷 **Instant Barcode & QR Scanning** — Retrieve full product information in seconds.
-- 🧠 **AI-Powered Ingredient Analysis** — Personalised safety summary based on your allergies, medical conditions, dietary preferences, and medications.
-- 💊 **Medication × Food Interaction Alerts** — Detects dangerous food-drug combinations (e.g. Warfarin + leafy greens, Statins + grapefruit) and shows a prominent warning instantly.
-- 👨‍👩‍👧 **Family Profile Switching** — One account, multiple health profiles. Scan once and see risk indicators for each family member.
-- 📊 **Nutrition Progress Tracker** — Logs your daily intake (calories, sugar, fat, salt, protein) against personalised limits that tighten automatically for your conditions.
-- 📦 **Offline Scan Cache** — Previously scanned products and their AI summaries are cached locally. Works in stores with no signal.
-- 🧾 **Smart Recommendations** — AI suggests safer food alternatives based on your full health profile.
-
-### 🔹 For Shopkeepers
-
-- Track product expiry using barcodes.
-- Get alerts before expiry to reduce wastage.
-- View customer trends for smarter restocking.
+> Per WHO, anaphylaxis-related deaths are rising. SafeBite puts clinical-grade food safety in everyone's hands.
 
 ---
 
 ## ✨ Features
 
-### 📱 Mobile App
+### 🔍 Three ways to scan
 
 | Feature | Description |
 |---------|-------------|
-| **QR / Barcode Scanner** | Supports EAN13, EAN8, QR, Code128, UPC-A/E and more |
-| **Health Profile Onboarding** | Allergies, 11 medical conditions, 14 dietary restrictions, 14 common medications |
-| **Medication Interaction Alerts** | Rule-based instant detection + AI-enhanced summary for 14 medication classes |
-| **Family Profiles** | Add unlimited family members, switch active profile with one tap |
-| **Nutrition Tracker** | Daily progress bars, condition-aware limits, pull-to-refresh food diary |
-| **Offline Cache** | Last 50 scanned products cached in AsyncStorage with full AI summaries |
-| **AI Product Summary** | Groq LLM analysis — "Overview from your data" + "General Overview" |
-| **Smart Recommendations** | AI-filtered products from 5000+ Open Food Facts entries |
-| **Allergen & Additive Display** | Full ingredients, allergens, additives, NOVA score, Nutri-Score |
-| **Expiry Date Display** | Shows expiry date from product data |
+| **Barcode / QR Scan** | EAN13, EAN8, QR, Code128, UPC-A/E and more → full product info + AI safety verdict |
+| **📸 Snap the Label** | No barcode (or not in the database)? Photograph the **ingredients list** — a vision model reads it and runs the same safety pipeline. Works for *any* packaged food |
+| **🍽️ Eat-Out Menu Scanner** | Photograph a restaurant menu — every dish is rated **Safe / Caution / Avoid** for your profile, sorted worst-first |
 
-### 📊 Shopkeeper Dashboard *(Web coming soon)*
+### 🛡️ Personalised safety
 
-- Scan at billing → auto-saves product to inventory.
-- Track most/least selling items.
-- Get insights into inventory and expiry trends.
+- 🧠 **AI Ingredient Analysis** — a personalised summary based on your allergies, conditions, diet and medications.
+- 💊 **Medication × Food Interaction Alerts** — detects dangerous combos (Warfarin + leafy greens, Statins + grapefruit, …) with prominent warnings. Re-checked deterministically on-device, not just by the model.
+- ⚠️ **Deterministic Allergen Matching** — a synonym map so a "Nuts" allergy is flagged by "almond"/"peanut", not only the literal word.
+- 👨‍👩‍👧 **Family Profiles** — one account, multiple health profiles; switch the active profile with one tap and every AI flow adapts.
+
+### 🍳 Eat better
+
+- **Recipe Suggestions** — enter the ingredients you have → health-safe recipes that respect your allergies, diet, conditions and medications.
+- **7-Day Meal Planner** — a profile-safe weekly plan plus an auto shopping list.
+- **Healthier Swaps** — scan a poorly-rated product and get safer, better-rated alternatives from a 5,000-product database.
+- **Smart Recommendations** — AI-filtered products matched to your full health profile.
+
+### 📊 Track & stay motivated
+
+- **Daily Health Score** — a 0–100 score from today's logged food vs. your condition-adjusted limits.
+- **Safe-Eating Streak** — consecutive qualifying days, to build the habit.
+- **Nutrition Tracker & Food Diary** — calories, sugar, fat, salt, protein vs. personalised limits that auto-tighten for your conditions.
+
+### 🏠 Home & convenience
+
+- **Recently Scanned** carousel — reopen recent products instantly (offline-friendly).
+- **Personalised Daily Tip** — rotates based on your medications/conditions/allergies.
+- **Offline Scan Cache** — last 50 products + AI summaries cached locally; works with no signal.
+
+### 👤 Account & settings
+
+- **Edit Health Profile** — update allergies, conditions, diet, medications, age & severity anytime.
+- **Change Password** (Supabase auth), **Privacy Policy**, **Share SafeBite**, and **☕ Support us**.
+
+### 🏪 For shopkeepers
+
+- **Inventory Management** — add / edit / delete products (name, price, stock, rating, expiry, image), stored per-shopkeeper in Supabase with row-level security.
+- **Insights Dashboard** — live stats (total / out-of-stock / expiring-soon), search, and colour-coded stock & expiry badges.
 
 ---
 
@@ -72,47 +77,42 @@ SafeBite solves this multi-sided problem with a single scan.
 |-------|-----------|
 | **Mobile Frontend** | React Native (Expo 54), TypeScript, expo-router |
 | **Styling** | NativeWind (Tailwind CSS), React Native Reanimated |
-| **Backend** | Node.js + Express.js (deployed on Render) |
-| **AI** | Groq API — llama-3.1-8b-instant & llama3-70b-8192 |
-| **Database & Auth** | Supabase (PostgreSQL + Auth) |
-| **Local Storage** | AsyncStorage — offline cache & active profile |
-| **Product Data** | Open Food Facts API (3M+ products) |
+| **Camera & Imaging** | expo-camera, expo-image-picker, expo-image-manipulator |
+| **Backend** | Node.js + Express.js (deployed on Render, with keep-alive ping) |
+| **AI — Text** | Groq: `llama-3.1-8b-instant` (summaries), `llama-3.3-70b-versatile` (recommendations, recipes, meal plans) |
+| **AI — Vision** | Groq: `meta-llama/llama-4-scout-17b-16e-instruct` (label & menu reading) |
+| **Database & Auth** | Supabase (PostgreSQL + Auth, row-level security) |
+| **Local Storage** | AsyncStorage — offline cache, active profile, streak, reco cache |
+| **Product Data** | Open Food Facts API |
 | **Build** | EAS (Expo Application Services) |
 
 ---
 
 ## 🗄️ Database Schema
 
-Six Supabase tables power the app:
+Supabase tables that power the app:
 
 | Table | Purpose |
 |-------|---------|
 | `Users` | Account info, shopkeeper flag |
 | `Customerdetails` | Health profile — allergies, conditions, medications, dietary |
 | `Shopkeepers` | Business details for shopkeeper accounts |
-| `recommended_products` | SHA-256 keyed cache for AI recommendations |
-| `nutrition_logs` | Daily food diary entries per user |
 | `family_members` | Additional health profiles per account |
+| `nutrition_logs` | Daily food diary entries per user |
+| `recommended_products` | Profile-hash keyed cache for AI recommendations |
+| `shop_products` | Per-shopkeeper inventory (RLS-scoped) — see `supabase/shop_products.sql` |
 
 ---
 
-## 🧪 Methodologies
+## 🧪 How it works
 
-1. **Barcode-Based Ingredient Parsing** via Open Food Facts API
-2. **Rule-Based Health Matching** — 11 conditions, 14 allergens, 14 medication-food interaction pairs
-3. **LLM-Powered Personalised Summaries** using Groq (fast inference)
-4. **Profile-Hash Caching** — avoids re-running AI for the same health profile
-5. **Offline-First Caching** — AsyncStorage fallback for zero-connectivity environments
-6. **Family Profile Architecture** — active profile persisted in AsyncStorage, affects all AI flows
-7. **Condition-Aware Nutrition Limits** — daily thresholds auto-tighten based on medical conditions
-
----
-
-## 🖼️ Screenshots
-
-| Home | Scan Result | Profile | Shop Interface |
-|------|-------------|---------|----------------|
-| ![](/assets/images/p4.jpg) | ![](/assets/images/p2.jpg) | ![](/assets/images/p5.jpg) | ![](/assets/images/p7.jpg) |
+1. **Three capture modes** — barcode (Open Food Facts), label photo (vision OCR), menu photo (vision).
+2. **Vision pipeline** — photos are downscaled on-device, then a Groq vision model extracts ingredients (label) or rates dishes (menu); the heavy lifting runs on Groq, so the free-tier backend only proxies.
+3. **Rule + LLM safety** — deterministic allergen/medication matching layered with LLM summaries (defence in depth).
+4. **Profile-hash caching** — avoids re-running AI for the same health profile.
+5. **Condition-aware limits** — daily nutrition thresholds tighten automatically per condition, feeding the tracker and health score.
+6. **Family architecture** — the active profile is persisted in AsyncStorage and drives every AI flow.
+7. **Offline-first** — scans, recommendations and tips fall back to local cache.
 
 ---
 
@@ -124,66 +124,69 @@ SafeBite/
 │   ├── _layout.tsx              # Root stack navigator
 │   ├── index.tsx                # Splash / auth check
 │   ├── family.tsx               # Family profiles management
-│   ├── (auth)/
-│   │   ├── login.tsx
-│   │   ├── signup.tsx
-│   │   └── onboarding.tsx       # Health profile setup (incl. medications)
+│   ├── edit-health.tsx          # Edit health profile
+│   ├── privacy.tsx              # Privacy policy
+│   ├── label-scan.tsx           # 📸 Snap-the-label (vision)
+│   ├── menu-scan.tsx            # 🍽️ Eat-out menu scanner (vision)
+│   ├── shop_interface.tsx       # Shopkeeper inventory (CRUD)
+│   ├── (auth)/                  # login, signup, onboarding
 │   ├── (tabs)/
-│   │   ├── home.tsx             # Scan entry + recommendations + profile pill
-│   │   ├── tracker.tsx          # Nutrition progress tracker + food diary
-│   │   └── profile.tsx          # User profile + family profile link
-│   ├── product/
-│   │   └── [id].tsx             # Product detail — AI summary, med warnings, log button
-│   ├── scan/
-│   │   └── index.tsx            # Barcode / QR scanner
-│   └── services/
-│       ├── summary.ts           # AI summary service (profile-aware)
-│       ├── recommendation.ts    # Recommendation service (profile-aware)
-│       ├── familyProfile.ts     # Family member CRUD + active profile (AsyncStorage)
-│       ├── nutritionLog.ts      # Food diary Supabase CRUD
-│       └── scanCache.ts         # Offline product cache (AsyncStorage, 50 entries)
+│   │   ├── home.tsx             # Scan toggle, recommendations, recently scanned, tip
+│   │   ├── tracker.tsx          # Health score, streak, nutrition tracker, food diary
+│   │   ├── recipes.tsx          # Recipe suggestions + meal planner
+│   │   └── profile.tsx          # Settings: account, support, about, health profile
+│   ├── product/[id].tsx         # Product detail — AI summary, med warnings, swaps, log
+│   └── scan/index.tsx           # Barcode / QR scanner
+├── services/                    # All client services (profile-aware)
+│   ├── summary.ts  recommendation.ts  familyProfile.ts  nutritionLog.ts
+│   ├── scanCache.ts  recipes.ts  alternatives.ts  healthScore.ts
+│   ├── healthTip.ts  labelScan.ts  menuScan.ts  shopProducts.ts
 ├── backend/
 │   ├── server.js
-│   ├── routes/
-│   │   ├── summary.js           # POST /api/summary
-│   │   └── recommendation.js    # POST /api/recommendation
-│   ├── controller/
-│   │   └── aiController.js      # Groq LLM — askAI, consultAi
-│   └── utils/
-│       ├── hashProfile.js
-│       └── scraper.js
-├── constants/
-│   ├── const.ts                 # Allergies, conditions, dietary, medications lists
-│   ├── medicationInteractions.ts # 14 medication-food interaction rules
-│   └── nutritionLimits.ts       # Daily limits + condition-specific overrides
-├── components/
-│   └── recomentation.tsx        # Horizontal product recommendation carousel
-└── lib/
-    ├── supabase.ts
-    ├── auth.ts
-    └── actions.ts
+│   ├── routes/                  # summary, recommendation, recipes,
+│   │                            # alternatives, scanLabel, scanMenu
+│   ├── controller/aiController.js  # Groq text + vision (askAI, consultAi,
+│   │                                # generateRecipes, generateMealPlan,
+│   │                                # analyzeLabelImage, analyzeMenuImage)
+│   └── utils/                   # hashProfile, scraper
+├── constants/                   # const, medicationInteractions,
+│   │                            # nutritionLimits, allergenKeywords
+├── components/                  # recomentation, RecipeCard
+├── supabase/shop_products.sql   # Shopkeeper inventory table + RLS
+└── lib/                         # supabase, auth, actions
 ```
 
 ---
 
-## 📦 How to Run Locally
+## 🔌 Backend API
 
-### 1. Clone the repo
+| Endpoint | Purpose |
+|----------|---------|
+| `GET  /health` | Health check / keep-alive |
+| `POST /api/summary` | AI product safety summary |
+| `POST /api/recommendation` | Profile-matched product recommendations |
+| `POST /api/recipes` | Health-safe recipes from ingredients |
+| `POST /api/recipes/mealplan` | 7-day profile-safe meal plan + shopping list |
+| `POST /api/alternatives` | Healthier, profile-safe product swaps |
+| `POST /api/scan-label` | Vision: read an ingredients label into product data |
+| `POST /api/scan-menu` | Vision: rate menu dishes for the profile |
+
+---
+
+## 📦 Run Locally
 
 ```bash
 git clone https://github.com/Ajay-Krishna00/SafeBite
 cd SafeBite
 ```
 
-### 2. Set up environment variables
-
-Create `/.env` (frontend):
+**Frontend `.env`:**
 ```
 EXPO_PUBLIC_PROJECT_URL=https://your-project.supabase.co
 EXPO_PUBLIC_PUBLIC_ANON_KEY=your-anon-key
 ```
 
-Create `/backend/.env`:
+**`backend/.env`:**
 ```
 PORT=3000
 EXPO_PUBLIC_PROJECT_URL=https://your-project.supabase.co
@@ -191,65 +194,48 @@ EXPO_PUBLIC_PUBLIC_ANON_KEY=your-anon-key
 GROQ_API_KEY3=your-groq-key
 ```
 
-### 3. Start the mobile app
-
+**Start the app & backend:**
 ```bash
 npm install
 npx expo start
+
+cd backend && npm install && node server.js
 ```
 
-### 4. Start the backend
-
-```bash
-cd backend
-npm install
-node server.js
-```
-
-Or deploy the backend to Render and update the API URL in `app/services/summary.ts` and `app/services/recommendation.ts`.
-
----
-
-## 🎯 Target Users
-
-- Individuals with chronic conditions or allergies
-- People on long-term medication
-- Parents managing food safety for their children
-- Health-conscious consumers
-- Families wanting a single shared food safety tool
-- Shopkeepers wanting smarter stock control
-
----
-
-## 🌍 Market Opportunity
-
-- 🚨 Rising food-related illnesses and medication side effects
-- 📱 Growing demand for food transparency and labelling
-- 👨‍👩‍👦 Families needing multi-profile health management
-- 🔁 Need for sustainable grocery usage
-- 🛒 Local sellers improving digital literacy
+Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopkeeper inventory. The deployed backend base URL is configured in the client `services/`.
 
 ---
 
 ## 🔒 Security & Privacy
 
-- Authentication powered by Supabase (JWT-based, secure token refresh)
-- Health profiles and medication data stored per-user with auth-scoped access
-- Active family profile stored only in device-local AsyncStorage — never synced
+- Supabase JWT auth with secure token refresh.
+- Health data stored per-user with auth-scoped access; shopkeeper inventory protected by row-level security.
+- Active family profile and streak stored only in device-local AsyncStorage.
+- Vision requests send only the photo + non-identifying health constraints; nothing is sold. See the in-app Privacy Policy.
 
 ---
 
 ## 📈 Roadmap
 
 - ✅ Medication × Food Interaction Alerts
-- ✅ Nutrition Progress Tracker & Food Diary
+- ✅ Nutrition Tracker, Health Score & Streak
 - ✅ Family Profile Switching
 - ✅ Offline Scan Cache
-- 🔜 Shopkeeper Inventory Web Portal
-- 🔜 Allergen Recall & Push Notifications
-- 🔜 AI Chat — ask questions about a scanned product
-- 🔜 Apple Health / Google Fit integration
-- 🔜 GDPR-compliant data export
+- ✅ Recipe Suggestions & 7-Day Meal Planner
+- ✅ Healthier Product Swaps
+- ✅ Snap-the-Label (vision scanning, no barcode needed)
+- ✅ Eat-Out Menu Scanner
+- ✅ Shopkeeper Inventory Management
+- 🔜 Customer-facing "safe for me" shop view
+- 🔜 Read-aloud / accessibility verdict
+- 🔜 Allergen recall & push notifications
+
+---
+
+## ☕ Support
+
+If SafeBite helps you, consider supporting development:
+**[buymeacoffee.com/ajaykrishnad](https://www.buymeacoffee.com/ajaykrishnad)**
 
 ---
 
@@ -267,6 +253,6 @@ MIT License — free for personal and educational use.
 
 ---
 
-> **"Health isn't just about what you eat — it's about knowing what you're about to eat. SafeBite gives you that power, for every product, for every member of your family, even without internet."**
+> **"Health isn't just about what you eat — it's about knowing what you're about to eat. SafeBite gives you that power: for every product, every menu, every member of your family — even without a barcode."**
 
 If you like this project, ⭐️ star it and share it with health-conscious friends!
