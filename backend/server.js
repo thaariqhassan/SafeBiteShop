@@ -6,6 +6,7 @@ const recommendationRoute = require("./routes/recommendation");
 const recipesRoute = require("./routes/recipes");
 const alternativesRoute = require("./routes/alternatives");
 const scanLabelRoute = require("./routes/scanLabel");
+const scanMenuRoute = require("./routes/scanMenu");
 
 dotenv.config();
 const app = express();
@@ -27,6 +28,7 @@ app.use("/api/recommendation", recommendationRoute);
 app.use("/api/recipes", recipesRoute);
 app.use("/api/alternatives", alternativesRoute);
 app.use("/api/scan-label", scanLabelRoute);
+app.use("/api/scan-menu", scanMenuRoute);
 
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);

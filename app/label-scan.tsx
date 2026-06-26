@@ -13,6 +13,7 @@ import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LabelProduct, scanLabel } from "@/services/labelScan";
 import handleSummary from "@/services/summary";
+import { logNutrition } from "@/services/nutritionLog";
 import { getActiveProfile } from "@/services/familyProfile";
 import { AllergenHit, matchAllergens } from "@/constants/allergenKeywords";
 import { MedicationWarning } from "@/constants/medicationInteractions";
@@ -34,11 +35,40 @@ const LabelScan = () => {
   const [status, setStatus] = useState("Reading the label…");
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  const [logged, setLogged] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
 
   const reset = () => {
     setResult(null);
     setError("");
+    setLogged(false);
     setPhase("idle");
+  };
+
+  const addToDiary = async () => {
+    if (!result) return;
+    setLogLoading(true);
+    const n = result.product.nutriments || ({} as LabelProduct["nutriments"]);
+    const { error: logErr } = await logNutrition(
+      result.product.product_name || "Unknown Product",
+      "label-scan",
+      {
+        calories: n["energy-kcal_100g"] ?? 0,
+        sugar: n.sugars_100g ?? 0,
+        fat: n.fat_100g ?? 0,
+        salt: n.salt_100g ?? 0,
+        protein: n.proteins_100g ?? 0,
+      }
+    );
+    setLogLoading(false);
+    if (logErr) {
+      Alert.alert(
+        "Couldn't add to diary",
+        typeof logErr === "string" ? logErr : (logErr as any)?.message ?? "Please try again."
+      );
+      return;
+    }
+    setLogged(true);
   };
 
   const pickFrom = async (source: "camera" | "library") => {
@@ -235,9 +265,32 @@ const LabelScan = () => {
           </Text>
         </View>
 
-        <TouchableOpacity onPress={reset} style={styles.primaryBtn}>
-          <Ionicons name="camera" size={18} color="#fff" />
-          <Text style={[styles.primaryBtnText, { marginLeft: 6 }]}>Scan Another Label</Text>
+        <TouchableOpacity
+          onPress={addToDiary}
+          disabled={logged || logLoading}
+          style={[
+            styles.primaryBtn,
+            { backgroundColor: logged ? "#d1fae5" : "#0284c7", opacity: logLoading ? 0.7 : 1 },
+          ]}
+        >
+          <Ionicons
+            name={logged ? "checkmark" : "add"}
+            size={18}
+            color={logged ? "#15803d" : "#fff"}
+          />
+          <Text
+            style={[
+              styles.primaryBtnText,
+              { marginLeft: 6, color: logged ? "#15803d" : "#fff" },
+            ]}
+          >
+            {logLoading ? "Logging…" : logged ? "Added to Food Diary" : "Add to Food Diary"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={reset} style={[styles.secondaryBtn, { marginTop: 12 }]}>
+          <Ionicons name="camera" size={18} color="#15803d" />
+          <Text style={[styles.secondaryBtnText, { marginLeft: 6 }]}>Scan Another Label</Text>
         </TouchableOpacity>
       </ScrollView>
     );

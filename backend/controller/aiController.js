@@ -236,10 +236,57 @@ Extract per-100g nutrition values only if a nutrition table is visible. If the i
   return extractJson(result.choices[0].message.content, "object");
 };
 
+// Reads a restaurant menu photo and rates each dish for the diner's profile.
+const analyzeMenuImage = async (imageDataUrl, userProfile = {}) => {
+  const allergies = (userProfile.allergies || []).filter((a) => a && a !== "None");
+  const conditions = (userProfile.conditions || []).filter((c) => c && c !== "None");
+  const dietary = (userProfile.dietary || []).filter((d) => d && d !== "None");
+  const medications = (userProfile.medications || []).filter((m) => m && m !== "None");
+
+  const prompt = `This is a photo of a restaurant menu. The diner has these health constraints:
+- Allergies (must avoid): ${allergies.length ? allergies.join(", ") : "none"}
+- Dietary restrictions: ${dietary.length ? dietary.join(", ") : "none"}
+- Medical conditions: ${conditions.length ? conditions.join(", ") : "none"}
+- Medications (watch for food interactions): ${medications.length ? medications.join(", ") : "none"}
+
+Identify the dishes on the menu. For each dish judge it for THIS diner based on its likely ingredients:
+- "avoid": likely contains an allergen they're allergic to, breaks a dietary restriction, or strongly conflicts with a condition/medication.
+- "caution": possibly risky or depends on preparation.
+- "safe": very likely fine for them.
+
+Return ONLY a JSON array (max 14 dishes, most relevant first), no markdown:
+[
+  { "dish": "dish name", "verdict": "safe|caution|avoid", "reason": "one short sentence", "concerns": ["short flag", ...] }
+]
+If the image is not a readable menu, return [].`;
+
+  const result = await groq.chat.completions.create({
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    temperature: 0.2,
+    max_tokens: 2000,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You read restaurant menus from images and rate dishes for a diner's health profile. Output ONLY valid JSON. Be cautious: if unsure whether a dish contains an allergen, use 'caution', never 'safe'.",
+      },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ],
+      },
+    ],
+  });
+  return extractJson(result.choices[0].message.content, "array");
+};
+
 module.exports = {
   askAI,
   consultAi,
   generateRecipes,
   generateMealPlan,
   analyzeLabelImage,
+  analyzeMenuImage,
 };

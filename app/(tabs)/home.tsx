@@ -31,6 +31,7 @@ const index = () => {
   const [isProfileSelf, setIsProfileSelf] = useState(true);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [tip, setTip] = useState<string>("");
+  const [scanMode, setScanMode] = useState<"product" | "menu">("product");
 
   useFocusEffect(
     useCallback(() => {
@@ -84,9 +85,54 @@ const index = () => {
           alignItems: "center",
         }}
       >
+        {/* Scan mode toggle */}
+        <View
+          style={{
+            flexDirection: "row",
+            backgroundColor: "rgba(255,255,255,0.18)",
+            borderRadius: 30,
+            padding: 4,
+            marginBottom: 14,
+          }}
+        >
+          {(["product", "menu"] as const).map((m) => {
+            const active = scanMode === m;
+            return (
+              <TouchableOpacity
+                key={m}
+                onPress={() => setScanMode(m)}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 18,
+                  paddingVertical: 8,
+                  borderRadius: 24,
+                  backgroundColor: active ? "#ffffff" : "transparent",
+                }}
+              >
+                <Ionicons
+                  name={m === "product" ? "barcode-outline" : "restaurant-outline"}
+                  size={16}
+                  color={active ? "#15803d" : "#ffffff"}
+                />
+                <Text
+                  style={{
+                    marginLeft: 6,
+                    fontWeight: "700",
+                    fontSize: 13,
+                    color: active ? "#15803d" : "#ffffff",
+                  }}
+                >
+                  {m === "product" ? "Product" : "Menu"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         <TouchableOpacity
-          className="w-[270px] h-[280px] rounded-lg flex items-center justify-center"
-          onPress={() => router.push("/scan")}
+          className="w-[270px] h-[260px] rounded-lg flex items-center justify-center"
+          onPress={() => router.push(scanMode === "menu" ? "/menu-scan" : "/scan")}
         >
           <Animated.View
             style={[
@@ -96,23 +142,17 @@ const index = () => {
               },
               animatedStyle,
             ]}
-            // className="flex flex-row"
           >
             <Image
               source={qr2}
-              className="w-[280px] h-[294px] rounded-3xl"
-              // resizeMethod="resize"
+              className="w-[260px] h-[274px] rounded-3xl"
               resizeMode="cover"
             />
-            {/* <Text
-              className="text-gray-900 mr-1"
-              style={{ fontSize: 22, fontWeight: "bold" }}
-            >
-              Tap to scan
-            </Text> 
-            <Ionicons name="scan-circle-outline" size={30} />*/}
           </Animated.View>
         </TouchableOpacity>
+        <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15, marginTop: 8 }}>
+          {scanMode === "menu" ? "Tap to scan a menu" : "Tap to scan a product"}
+        </Text>
       </LinearGradient>
       <ScrollView
         style={{ flex: 1, width: "100%" }}

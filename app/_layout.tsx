@@ -111,6 +111,16 @@ export default function RootLayout() {
             animationDuration: 500,
           }}
         />
+        <Stack.Screen
+          name="menu-scan"
+          options={{
+            headerTitle: "Scan Menu",
+            headerStyle: { backgroundColor: "#004d00" },
+            headerTintColor: "#ffffff",
+            animation: "fade",
+            animationDuration: 500,
+          }}
+        />
       </Stack>
     </>
   );
