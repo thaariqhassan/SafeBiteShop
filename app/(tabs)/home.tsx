@@ -15,7 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Recommendation from "@/components/recomentation";
-import { getActiveProfile } from "@/app/services/familyProfile";
+import { getActiveProfile } from "@/app/_services/familyProfile";
 
 const index = () => {
   const router = useRouter();

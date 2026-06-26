@@ -1,7 +1,13 @@
 import "./global.css";
 import { Stack } from "expo-router";
+import { useEffect } from "react";
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Warm up Render backend on app start to avoid cold-start delay on first scan
+    fetch("https://safebite-28tg.onrender.com/health").catch(() => {});
+  }, []);
+
   return (
     <>
       <Stack>

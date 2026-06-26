@@ -1,4 +1,4 @@
-import handleRecommendation from "@/app/services/recommendation";
+import handleRecommendation from "@/app/_services/recommendation";
 import { param } from "@/backend/routes/summary";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
