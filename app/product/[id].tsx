@@ -10,6 +10,7 @@ import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import handleSummary, { SummaryResult } from "../services/summary";
 import { MedicationWarning } from "@/constants/medicationInteractions";
+import { logNutrition } from "../services/nutritionLog";
 
 export interface ProductData {
   product_name: string;
@@ -39,6 +40,8 @@ const ProductSummary = () => {
   const [summaryData, setSummaryData] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState<boolean>(true);
   const [medicationWarnings, setMedicationWarnings] = useState<MedicationWarning[]>([]);
+  const [logged, setLogged] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
 
   const navigation = useNavigation();
   useEffect(() => {
@@ -282,6 +285,43 @@ const ProductSummary = () => {
                 </Text>
               )}
             </View>
+            <TouchableOpacity
+              style={{
+                backgroundColor: logged ? "#d1fae5" : "#0284c7",
+                padding: 12,
+                borderRadius: 10,
+                marginTop: 12,
+                opacity: logLoading ? 0.6 : 1,
+              }}
+              disabled={logged || logLoading}
+              onPress={async () => {
+                setLogLoading(true);
+                const { error } = await logNutrition(
+                  productData?.product_name || "Unknown Product",
+                  String(id),
+                  {
+                    calories: parseFloat(productData?.nutriments?.["energy-kcal_100g"]) || 0,
+                    sugar: parseFloat(productData?.nutriments?.["sugars_100g"]) || 0,
+                    fat: parseFloat(productData?.nutriments?.["fat_100g"]) || 0,
+                    salt: parseFloat(productData?.nutriments?.["salt_100g"]) || 0,
+                    protein: parseFloat(productData?.nutriments?.["proteins_100g"]) || 0,
+                  }
+                );
+                setLogLoading(false);
+                if (!error) setLogged(true);
+              }}
+            >
+              <Text
+                style={{
+                  color: logged ? "#15803d" : "#ffffff",
+                  textAlign: "center",
+                  fontWeight: "600",
+                  fontSize: 16,
+                }}
+              >
+                {logLoading ? "Logging…" : logged ? "✓ Added to Food Diary" : "Add to Food Diary"}
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               className=" bg-green-600 p-3 rounded-lg mb-20 mt-4"
               onPress={() => navigation.goBack()}

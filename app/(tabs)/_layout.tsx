@@ -76,6 +76,18 @@ const _layout = () => {
         }}
       />
       <Tabs.Screen
+        name="tracker"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} icon={"stats-chart"} title="Tracker" />
+          ),
+          headerTitle: "Nutrition Tracker",
+          headerStyle: { backgroundColor: "#004d00" },
+          headerTintColor: "#ffffff",
+          animation: "fade",
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
