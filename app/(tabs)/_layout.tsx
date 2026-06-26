@@ -13,22 +13,22 @@ const TabIcon = ({
 }) => (
   <>
     {focused ? (
-      <View className="flex-row items-center justify-center w-full min-w-[120px] min-h-16 mt-5 rounded-full overflow-hidden">
+      <View className="flex-row items-center justify-center px-2 min-h-16 mt-5 rounded-full overflow-hidden">
         <Ionicons
           name={
             focused
               ? icon
               : (`${icon}-outline` as keyof typeof Ionicons.glyphMap)
           }
-          size={21}
+          size={20}
           color={"#fde047"}
         />
-        <Text className="text-lg text-[#fdeb84] ml-2 font-semibold">
+        <Text className="text-sm text-[#fdeb84] ml-1.5 font-semibold">
           {title}
         </Text>
       </View>
     ) : (
-      <View className="items-center justify-center w-full min-w-[120px] min-h-16 mt-5 rounded-full overflow-hidden">
+      <View className="items-center justify-center px-2 min-h-16 mt-5 rounded-full overflow-hidden">
         <Ionicons
           name={
             focused
@@ -81,6 +81,17 @@ const _layout = () => {
             <TabIcon focused={focused} icon={"stats-chart"} title="Tracker" />
           ),
           headerTitle: "Nutrition Tracker",
+          headerStyle: { backgroundColor: "#004d00" },
+          headerTintColor: "#ffffff",
+        }}
+      />
+      <Tabs.Screen
+        name="recipes"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} icon={"restaurant"} title="Recipes" />
+          ),
+          headerTitle: "Recipes",
           headerStyle: { backgroundColor: "#004d00" },
           headerTintColor: "#ffffff",
         }}

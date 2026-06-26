@@ -17,6 +17,12 @@ import {
   getNutritionLimits,
   NutritionLimit,
 } from "@/constants/nutritionLimits";
+import {
+  computeHealthScore,
+  getStreak,
+  HealthScore,
+  updateStreak,
+} from "@/services/healthScore";
 
 interface Totals {
   calories: number;
@@ -31,6 +37,20 @@ const barColor = (pct: number) => {
   if (pct >= 0.8) return "#f97316";
   if (pct >= 0.6) return "#facc15";
   return "#16a34a";
+};
+
+const scoreColor = (s: number) => {
+  if (s >= 80) return "#22c55e";
+  if (s >= 60) return "#facc15";
+  if (s >= 40) return "#f97316";
+  return "#dc2626";
+};
+
+const scoreLabel = (s: number) => {
+  if (s >= 80) return "Great — well within your safe limits";
+  if (s >= 60) return "Good — a little over on some nutrients";
+  if (s >= 40) return "Careful — several limits exceeded";
+  return "Over your safe limits today";
 };
 
 const NutrientBar = ({
@@ -78,6 +98,8 @@ const dateLabel = today.toLocaleDateString([], {
 const tracker = () => {
   const [logs, setLogs] = useState<NutritionLogEntry[]>([]);
   const [limits, setLimits] = useState<NutritionLimit | null>(null);
+  const [score, setScore] = useState<HealthScore | null>(null);
+  const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -94,9 +116,29 @@ const tracker = () => {
     ]);
     setLogs(logsData);
     const conditions: string[] = profileRes.data?.medical_conditions ?? [];
-    setLimits(getNutritionLimits(conditions));
+    const lim = getNutritionLimits(conditions);
+    setLimits(lim);
+
+    const t = logsData.reduce(
+      (acc, l) => ({
+        calories: acc.calories + l.calories,
+        sugar: acc.sugar + l.sugar,
+        fat: acc.fat + l.fat,
+        salt: acc.salt + l.salt,
+        protein: acc.protein + l.protein,
+      }),
+      { calories: 0, sugar: 0, fat: 0, salt: 0, protein: 0 }
+    );
+    const hs = computeHealthScore(t, lim, logsData.length > 0);
+    setScore(hs);
+    setStreak(await updateStreak(hs ? hs.score : null));
+
     setLoading(false);
     setRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    getStreak().then(setStreak);
   }, []);
 
   useEffect(() => { loadData(); }, []);
@@ -137,6 +179,45 @@ const tracker = () => {
       <Text style={{ fontSize: 20, fontWeight: "bold", color: "#111827", marginBottom: 16 }}>
         Today's Nutrition
       </Text>
+
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: "#004d00",
+          borderRadius: 14,
+          padding: 16,
+          marginBottom: 16,
+        }}
+      >
+        <View
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 36,
+            borderWidth: 4,
+            borderColor: score ? scoreColor(score.score) : "#6b7280",
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 16,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 22, fontWeight: "bold" }}>
+            {score ? score.score : "–"}
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#d1fae5", fontSize: 12, fontWeight: "600" }}>
+            HEALTH SCORE
+          </Text>
+          <Text style={{ color: "#fff", fontSize: 14, marginTop: 2 }}>
+            {score ? scoreLabel(score.score) : "Log items to see today's score"}
+          </Text>
+          <Text style={{ color: "#fde047", fontSize: 13, fontWeight: "700", marginTop: 6 }}>
+            🔥 {streak}-day safe-eating streak
+          </Text>
+        </View>
+      </View>
 
       {limits && (
         <View

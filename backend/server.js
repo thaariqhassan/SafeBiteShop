@@ -3,6 +3,8 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const summaryRoute = require("./routes/summary");
 const recommendationRoute = require("./routes/recommendation");
+const recipesRoute = require("./routes/recipes");
+const alternativesRoute = require("./routes/alternatives");
 
 dotenv.config();
 const app = express();
@@ -20,6 +22,8 @@ app.get("/health", (req, res) => {
 
 app.use("/api/summary", summaryRoute);
 app.use("/api/recommendation", recommendationRoute);
+app.use("/api/recipes", recipesRoute);
+app.use("/api/alternatives", alternativesRoute);
 
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);

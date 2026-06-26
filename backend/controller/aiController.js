@@ -89,4 +89,108 @@ Output: A plain JSON array of product IDs, e.g.:
   }
 };
 
-module.exports = { askAI, consultAi };
+// Extract the first JSON array or object from a model response that may include
+// stray prose or ```json fences.
+const extractJson = (text, kind) => {
+  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const pattern = kind === "array" ? /\[[\s\S]*\]/ : /\{[\s\S]*\}/;
+  const match = cleaned.match(pattern);
+  if (!match) throw new Error("AI response did not contain valid JSON");
+  return JSON.parse(match[0]);
+};
+
+const profileConstraints = (userProfile) => {
+  const allergies = (userProfile.allergies || []).filter((a) => a && a !== "None");
+  const conditions = (userProfile.conditions || []).filter((c) => c && c !== "None");
+  const dietary = (userProfile.dietary || []).filter((d) => d && d !== "None");
+  const medications = (userProfile.medications || []).filter((m) => m && m !== "None");
+  return `
+HARD SAFETY RULES for this user — never violate:
+- Allergies (must NOT appear in any recipe): ${allergies.length ? allergies.join(", ") : "none"}
+- Dietary restrictions (must respect): ${dietary.length ? dietary.join(", ") : "none"}
+- Medical conditions (keep recipes appropriate, e.g. low sugar for diabetes, low sodium for hypertension): ${conditions.length ? conditions.join(", ") : "none"}
+- Medications (avoid foods that interact, e.g. no grapefruit with statins, no leafy greens with warfarin): ${medications.length ? medications.join(", ") : "none"}`;
+};
+
+const generateRecipes = async (ingredients, userProfile) => {
+  const prompt = `The user has these ingredients on hand:
+${ingredients.join(", ")}
+${profileConstraints(userProfile)}
+
+Suggest 3 simple, healthy recipes that use mostly these ingredients and are SAFE for this user's health profile.
+
+Return ONLY a JSON array, no other text, in exactly this shape:
+[
+  {
+    "name": "Recipe name",
+    "description": "One short sentence",
+    "prepTime": 10,
+    "cookTime": 20,
+    "servings": 2,
+    "difficulty": "easy",
+    "calories": 450,
+    "protein": 25,
+    "carbs": 45,
+    "fat": 18,
+    "ingredients": ["ingredient with amount"],
+    "instructions": ["Step 1", "Step 2"],
+    "usesYourIngredients": ["ingredient"],
+    "needToBuy": ["ingredient"],
+    "safeFor": "Short note on why this fits the user's allergies/conditions",
+    "tags": ["quick"]
+  }
+]
+
+Rules: max 6 instruction steps, short strings, accurate calorie/macro estimates, no markdown, no extra text.`;
+
+  const result = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a careful nutrition-aware chef. You output ONLY valid JSON. You never suggest any ingredient the user is allergic to or that conflicts with their medications or diet.",
+      },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: 2000,
+  });
+  return extractJson(result.choices[0].message.content, "array");
+};
+
+const generateMealPlan = async (ingredients, userProfile, days = 7) => {
+  const prompt = `Create a ${days}-day meal plan (breakfast, lunch, dinner per day) that is SAFE for this user's health profile.
+Prefer using these ingredients the user already has: ${ingredients.length ? ingredients.join(", ") : "any common healthy ingredients"}.
+${profileConstraints(userProfile)}
+
+Return ONLY a JSON object, no other text, in exactly this shape:
+{
+  "mealPlan": [
+    {
+      "day": 1,
+      "meals": [
+        { "type": "breakfast", "name": "Meal name", "description": "Brief", "calories": 350, "mainIngredients": ["a", "b"] }
+      ]
+    }
+  ],
+  "shoppingList": ["items the user likely needs to buy"]
+}
+
+Rules: exactly ${days} days, 3 meals each, short strings, accurate calorie estimates, no markdown, no extra text.`;
+
+  const result = await groq.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a careful nutrition-aware meal planner. You output ONLY valid JSON and never include foods that conflict with the user's allergies, diet, conditions, or medications.",
+      },
+      { role: "user", content: prompt },
+    ],
+    max_tokens: 3000,
+  });
+  return extractJson(result.choices[0].message.content, "object");
+};
+
+module.exports = { askAI, consultAi, generateRecipes, generateMealPlan };

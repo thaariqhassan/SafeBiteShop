@@ -8,11 +8,12 @@ import {
   Alert,
 } from "react-native";
 import React, { useEffect, useState } from "react";
-import { useLocalSearchParams, useNavigation } from "expo-router";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import handleSummary, { SummaryResult } from "@/services/summary";
 import { MedicationWarning } from "@/constants/medicationInteractions";
 import { logNutrition } from "@/services/nutritionLog";
 import { cacheProduct, getCachedProduct, updateCachedSummary } from "@/services/scanCache";
+import { AlternativeProduct, getHealthierAlternatives } from "@/services/alternatives";
 
 export interface ProductData {
   product_name: string;
@@ -46,8 +47,11 @@ const ProductSummary = () => {
   const [fromCache, setFromCache] = useState(false);
   const [logged, setLogged] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
+  const [alternatives, setAlternatives] = useState<AlternativeProduct[]>([]);
+  const [altLoading, setAltLoading] = useState(false);
 
   const navigation = useNavigation();
+  const router = useRouter();
   useEffect(() => {
     const fetchData = async () => {
       const applyProduct = (p: any) => {
@@ -136,6 +140,33 @@ const ProductSummary = () => {
     };
     fetchSummary();
   }, [summData, fromCache]);
+
+  // Suggest healthier swaps only when the scanned product isn't already great
+  // (Nutri-Score C or worse, or highly processed).
+  useEffect(() => {
+    if (!productData || fromCache) return;
+    const grade = (productData.nutriscore_grade || "").toLowerCase();
+    const risky = ["c", "d", "e"].includes(grade) || (productData.nova_group || 0) >= 4;
+    if (!risky) return;
+
+    let cancelled = false;
+    setAltLoading(true);
+    getHealthierAlternatives({
+      id: String(id),
+      product_name: productData.product_name,
+      ingredients_text: productData.ingredients_text,
+      nutriscore_grade: productData.nutriscore_grade,
+      nutriments: productData.nutriments,
+    }).then((alts) => {
+      if (!cancelled) {
+        setAlternatives(alts);
+        setAltLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [productData, fromCache]);
 
   return (
     <>
@@ -354,6 +385,71 @@ const ProductSummary = () => {
                 </Text>
               )}
             </View>
+
+            {(altLoading || alternatives.length > 0) && (
+              <View style={{ marginTop: 18 }}>
+                <Text className="text-lg font-semibold text-gray-800 mb-1">
+                  🌱 Healthier picks for you
+                </Text>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>
+                  Safer for your profile and better rated than this product.
+                </Text>
+                {altLoading ? (
+                  <ActivityIndicator size="small" color="#15803d" />
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {alternatives.map((alt) => (
+                      <TouchableOpacity
+                        key={alt.id}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/product/[id]",
+                            params: { id: alt.id },
+                          })
+                        }
+                        style={{ width: 130, marginRight: 12 }}
+                      >
+                        <Image
+                          source={{
+                            uri:
+                              alt.image ||
+                              "https://placehold.co/130x110?text=No+Image&font=roboto",
+                          }}
+                          style={{
+                            width: 130,
+                            height: 110,
+                            borderRadius: 8,
+                            backgroundColor: "#f0f0f0",
+                          }}
+                          resizeMode="contain"
+                        />
+                        <Text
+                          numberOfLines={2}
+                          style={{ fontSize: 12, color: "#111827", marginTop: 4, fontWeight: "600" }}
+                        >
+                          {alt.name}
+                        </Text>
+                        <View
+                          style={{
+                            alignSelf: "flex-start",
+                            backgroundColor: "#dcfce7",
+                            borderRadius: 6,
+                            paddingHorizontal: 6,
+                            paddingVertical: 1,
+                            marginTop: 2,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, color: "#166534", fontWeight: "700" }}>
+                            Nutri-Score {alt.nutriscore_grade.toUpperCase()}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            )}
+
             <TouchableOpacity
               style={{
                 backgroundColor: logged ? "#d1fae5" : "#0284c7",
