@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Image } from "react-native";
+import { View, Text, TouchableOpacity, Image, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import qr from "@/assets/images/qr.jpg";
@@ -16,17 +16,44 @@ import Animated, {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Recommendation from "@/components/recomentation";
 import { getActiveProfile } from "@/services/familyProfile";
+import { getAllCachedProducts } from "@/services/scanCache";
+import { getDailyTip } from "@/services/healthTip";
+
+interface RecentScan {
+  id: string;
+  name: string;
+  image: string | null;
+}
 
 const index = () => {
   const router = useRouter();
   const [activeProfileName, setActiveProfileName] = useState<string>("");
   const [isProfileSelf, setIsProfileSelf] = useState(true);
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
+  const [tip, setTip] = useState<string>("");
 
   useFocusEffect(
     useCallback(() => {
       getActiveProfile().then((p) => {
         setActiveProfileName(p.name);
         setIsProfileSelf(p.isSelf);
+      });
+      getDailyTip().then(setTip);
+      getAllCachedProducts().then((entries) => {
+        setRecentScans(
+          entries.slice(0, 10).map((e) => {
+            const prod = e.product || {};
+            return {
+              id: e.id,
+              name: prod.product_name || "Scanned product",
+              image:
+                prod.image_url ||
+                prod?.selected_images?.front?.display?.en ||
+                prod?.selected_images?.front?.display?.fr ||
+                null,
+            };
+          })
+        );
       });
     }, [])
   );
@@ -87,7 +114,11 @@ const index = () => {
           </Animated.View>
         </TouchableOpacity>
       </LinearGradient>
-      <View className="flex-1 w-full h-full mb-10 px-5">
+      <ScrollView
+        style={{ flex: 1, width: "100%" }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
         <TouchableOpacity
           onPress={() => router.push("/family")}
           style={{
@@ -122,7 +153,72 @@ const index = () => {
           Recommended Products for You
         </Text>
         <Recommendation />
-      </View>
+
+        {recentScans.length > 0 && (
+          <View style={{ marginTop: 18 }}>
+            <Text className="text-2xl font-bold text-gray-900 mb-3">
+              Recently Scanned
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {recentScans.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/product/[id]",
+                      params: { id: item.id },
+                    })
+                  }
+                  style={{ width: 120, marginRight: 12 }}
+                >
+                  <Image
+                    source={{
+                      uri:
+                        item.image ||
+                        "https://placehold.co/120x120?text=No+Image&font=roboto",
+                    }}
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 10,
+                      backgroundColor: "#e5e7eb",
+                    }}
+                    resizeMode="contain"
+                  />
+                  <Text
+                    numberOfLines={2}
+                    style={{ fontSize: 13, color: "#111827", marginTop: 4, fontWeight: "600" }}
+                  >
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {tip ? (
+          <View
+            style={{
+              flexDirection: "row",
+              backgroundColor: "#ecfdf5",
+              borderWidth: 1,
+              borderColor: "#a7f3d0",
+              borderRadius: 14,
+              padding: 14,
+              marginTop: 20,
+            }}
+          >
+            <Ionicons name="bulb" size={20} color="#15803d" style={{ marginRight: 10, marginTop: 1 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: "700", color: "#166534", fontSize: 13, marginBottom: 2 }}>
+                Tip for you
+              </Text>
+              <Text style={{ color: "#166534", fontSize: 13, lineHeight: 18 }}>{tip}</Text>
+            </View>
+          </View>
+        ) : null}
+      </ScrollView>
     </>
   );
 };
