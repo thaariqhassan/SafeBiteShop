@@ -1,13 +1,14 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { LabelProduct, scanLabel } from "@/services/labelScan";
@@ -16,7 +17,7 @@ import { getActiveProfile } from "@/services/familyProfile";
 import { AllergenHit, matchAllergens } from "@/constants/allergenKeywords";
 import { MedicationWarning } from "@/constants/medicationInteractions";
 
-type Phase = "camera" | "processing" | "result";
+type Phase = "idle" | "processing" | "result";
 
 interface Result {
   product: LabelProduct;
@@ -29,10 +30,7 @@ interface Result {
 const num = (v: number | null) => (v === null || v === undefined ? "N/A" : v);
 
 const LabelScan = () => {
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView>(null);
-  const [ready, setReady] = useState(false);
-  const [phase, setPhase] = useState<Phase>("camera");
+  const [phase, setPhase] = useState<Phase>("idle");
   const [status, setStatus] = useState("Reading the label…");
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);
@@ -40,30 +38,48 @@ const LabelScan = () => {
   const reset = () => {
     setResult(null);
     setError("");
-    setReady(false);
-    setPhase("camera");
+    setPhase("idle");
   };
 
-  const capture = async () => {
-    if (!cameraRef.current || !ready) return;
+  const pickFrom = async (source: "camera" | "library") => {
     setError("");
-    setReady(false);
+    try {
+      if (source === "camera") {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert("Camera needed", "Please allow camera access to scan a label.");
+          return;
+        }
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert("Photos needed", "Please allow photo access to pick a label image.");
+          return;
+        }
+      }
+
+      const opts = { quality: 0.5, base64: true } as const;
+      const res =
+        source === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync(opts);
+
+      if (res.canceled || !res.assets?.length) return;
+      await analyze(res.assets[0]);
+    } catch (e: any) {
+      console.error("Label pick error:", e);
+      setError(e?.message ? `Error: ${e.message}` : "Couldn't open the camera. Please try again.");
+    }
+  };
+
+  const analyze = async (asset: ImagePicker.ImagePickerAsset) => {
     setPhase("processing");
     try {
-      setStatus("Capturing…");
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.5,
-        base64: true,
-      });
-      if (!photo?.uri) throw new Error("Could not capture photo");
-
-      // Downscale to keep the upload small and within free-tier token limits.
-      // If manipulation isn't available (e.g. Expo Go), fall back to the raw
-      // base64 the camera already produced so the feature still works.
       setStatus("Preparing image…");
-      let base64: string | null = photo.base64 ?? null;
+      let base64: string | null = asset.base64 ?? null;
+      // Downscale for a smaller upload / fewer tokens; fall back to original.
       try {
-        const rendered = await ImageManipulator.manipulate(photo.uri)
+        const rendered = await ImageManipulator.manipulate(asset.uri)
           .resize({ width: 1080 })
           .renderAsync();
         const out = await rendered.saveAsync({
@@ -73,9 +89,9 @@ const LabelScan = () => {
         });
         if (out.base64) base64 = out.base64;
       } catch (manipErr) {
-        console.warn("Image resize failed, using original capture:", manipErr);
+        console.warn("Image resize failed, using original:", manipErr);
       }
-      if (!base64) throw new Error("Could not process the captured photo");
+      if (!base64) throw new Error("Could not read the selected image");
       const dataUrl = `data:image/jpeg;base64,${base64}`;
 
       setStatus("Reading the label…");
@@ -85,7 +101,7 @@ const LabelScan = () => {
           ("error" in product && product.error) ||
             "Couldn't read the label. Make sure the ingredients list is clear and well lit."
         );
-        setPhase("camera");
+        setPhase("idle");
         return;
       }
 
@@ -123,37 +139,11 @@ const LabelScan = () => {
       });
       setPhase("result");
     } catch (e: any) {
-      console.error("Label scan error:", e);
-      setError(
-        e?.message
-          ? `Error: ${e.message}`
-          : "Something went wrong reading the label. Please try again."
-      );
-      setPhase("camera");
+      console.error("Label analyze error:", e);
+      setError(e?.message ? `Error: ${e.message}` : "Something went wrong reading the label.");
+      setPhase("idle");
     }
   };
-
-  // --- Permission states ---
-  if (!permission) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#15803d" />
-      </View>
-    );
-  }
-  if (!permission.granted) {
-    return (
-      <View style={styles.center}>
-        <Ionicons name="camera-outline" size={48} color="#9ca3af" />
-        <Text style={{ color: "#374151", fontSize: 15, marginTop: 12, textAlign: "center" }}>
-          We need camera access to read product labels.
-        </Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.primaryBtn}>
-          <Text style={styles.primaryBtnText}>Grant Permission</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   // --- Processing ---
   if (phase === "processing") {
@@ -253,63 +243,48 @@ const LabelScan = () => {
     );
   }
 
-  // --- Camera ---
+  // --- Idle (choose source) ---
   return (
-    <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFillObject}
-        onCameraReady={() => setReady(true)}
-      />
-      <View style={styles.overlay} pointerEvents="box-none">
-        <View style={styles.tipBox}>
-          <Text style={styles.tipText}>
-            Point at the ingredients list. Keep it flat, filling the frame, well lit.
-          </Text>
-        </View>
-        {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-        <TouchableOpacity
-          style={[styles.shutter, !ready && { opacity: 0.4 }]}
-          onPress={capture}
-          disabled={!ready}
-        >
-          <View style={styles.shutterInner} />
-        </TouchableOpacity>
-        {!ready && <Text style={styles.readyHint}>Starting camera…</Text>}
+    <View style={styles.idle}>
+      <View style={styles.illus}>
+        <Ionicons name="document-text-outline" size={56} color="#15803d" />
       </View>
+      <Text style={styles.idleTitle}>Scan an ingredients label</Text>
+      <Text style={styles.idleSub}>
+        For products with no barcode (or not in our database). Capture the
+        ingredients list clearly and well lit, then we'll check it against your
+        health profile.
+      </Text>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      <TouchableOpacity style={styles.primaryBtn} onPress={() => pickFrom("camera")}>
+        <Ionicons name="camera" size={18} color="#fff" />
+        <Text style={[styles.primaryBtnText, { marginLeft: 8 }]}>Take a Photo</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.secondaryBtn} onPress={() => pickFrom("library")}>
+        <Ionicons name="images-outline" size={18} color="#15803d" />
+        <Text style={[styles.secondaryBtnText, { marginLeft: 8 }]}>Choose from Gallery</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24, backgroundColor: "#f9fafb" },
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: "space-between", padding: 20 },
-  tipBox: {
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 10,
-  },
-  tipText: { color: "#fff", fontSize: 13, textAlign: "center" },
-  errorBox: { backgroundColor: "rgba(220,38,38,0.9)", borderRadius: 10, padding: 10 },
-  errorText: { color: "#fff", fontSize: 13, textAlign: "center" },
-  shutter: {
+  idle: { flex: 1, justifyContent: "center", padding: 28, backgroundColor: "#f9fafb" },
+  illus: {
     alignSelf: "center",
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    borderWidth: 5,
-    borderColor: "#fff",
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#dcfce7",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  shutterInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#15803d" },
-  readyHint: { color: "#fff", textAlign: "center", fontSize: 12, marginBottom: 16 },
+  idleTitle: { fontSize: 20, fontWeight: "800", color: "#111827", textAlign: "center" },
+  idleSub: { fontSize: 14, color: "#6b7280", textAlign: "center", marginTop: 8, marginBottom: 24, lineHeight: 20 },
   banner: { flexDirection: "row", alignItems: "center", borderRadius: 14, padding: 16, marginBottom: 14 },
   productName: { fontSize: 20, fontWeight: "800", color: "#111827" },
   card: {
@@ -323,6 +298,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   cardTitle: { fontSize: 14, fontWeight: "700", color: "#111827", marginBottom: 6 },
+  errorText: { color: "#dc2626", fontSize: 13, textAlign: "center", marginBottom: 14 },
   primaryBtn: {
     flexDirection: "row",
     backgroundColor: "#15803d",
@@ -333,6 +309,16 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  secondaryBtn: {
+    flexDirection: "row",
+    backgroundColor: "#dcfce7",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+  },
+  secondaryBtnText: { color: "#15803d", fontWeight: "700", fontSize: 15 },
 });
 
 export default LabelScan;
