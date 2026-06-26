@@ -1,37 +1,28 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
   Image,
 } from "react-native";
+import { useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import itemImage from "../components/itemImg";
-
-interface ShopItem {
-  name: string;
-  key: string;
-  price: number;
-  imgsrc: string;
-  stock_count: number;
-  rating: number;
-  expiry: string;
-}
-
-const items: ShopItem[] = [
-  { name: "Lays", key: "lays", price: 20, imgsrc: itemImage[0], stock_count: 0, rating: 4.8, expiry: "2026-06-20" },
-  { name: "Pepsi", key: "pepsi", price: 60, imgsrc: itemImage[1], stock_count: 20, rating: 4.0, expiry: "2026-12-27" },
-  { name: "Elite Maida", key: "elite_maida", price: 100, imgsrc: itemImage[2], stock_count: 4, rating: 4.5, expiry: "2026-07-01" },
-  { name: "Boost", key: "boost", price: 70, imgsrc: itemImage[3], stock_count: 20, rating: 4.8, expiry: "2026-09-25" },
-  { name: "Milma curd", key: "milma_curd", price: 35, imgsrc: itemImage[4], stock_count: 10, rating: 4.8, expiry: "2026-06-30" },
-  { name: "Good Day", key: "goodday", price: 20, imgsrc: itemImage[5], stock_count: 10, rating: 4.8, expiry: "2026-11-01" },
-];
+import {
+  addShopProduct,
+  deleteShopProduct,
+  getShopProducts,
+  ShopProduct,
+  updateShopProduct,
+} from "@/services/shopProducts";
 
 const SOON_DAYS = 7;
 
-// Days from today until the expiry date (negative = already expired).
 const daysToExpiry = (expiry: string) => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -40,7 +31,8 @@ const daysToExpiry = (expiry: string) => {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 };
 
-const expiryMeta = (expiry: string) => {
+const expiryMeta = (expiry: string | null) => {
+  if (!expiry) return { color: "#6b7280", bg: "#f3f4f6", label: "No expiry" };
   const d = daysToExpiry(expiry);
   if (d < 0) return { color: "#dc2626", bg: "#fee2e2", label: "Expired" };
   if (d <= SOON_DAYS)
@@ -61,89 +53,338 @@ const StatPill = ({ value, label, color }: { value: number; label: string; color
   </View>
 );
 
+const EMPTY_FORM = {
+  name: "",
+  price: "",
+  stock_count: "",
+  rating: "",
+  expiry: "",
+  image_url: "",
+};
+
 const ShopInterface: React.FC = () => {
+  const [products, setProducts] = useState<ShopProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
+  const [modal, setModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    const data = await getShopProducts();
+    setProducts(data);
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
   const stats = useMemo(() => {
-    const outOfStock = items.filter((i) => i.stock_count === 0).length;
-    const expiringSoon = items.filter((i) => {
+    const outOfStock = products.filter((i) => i.stock_count === 0).length;
+    const expiringSoon = products.filter((i) => {
+      if (!i.expiry) return false;
       const d = daysToExpiry(i.expiry);
       return d >= 0 && d <= SOON_DAYS;
     }).length;
-    return { total: items.length, outOfStock, expiringSoon };
-  }, []);
+    return { total: products.length, outOfStock, expiringSoon };
+  }, [products]);
 
   const filtered = useMemo(
-    () => items.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase())),
-    [query]
+    () => products.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase())),
+    [products, query]
   );
+
+  const openAdd = () => {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM });
+    setModal(true);
+  };
+
+  const openEdit = (p: ShopProduct) => {
+    setEditingId(p.id);
+    setForm({
+      name: p.name,
+      price: String(p.price),
+      stock_count: String(p.stock_count),
+      rating: p.rating ? String(p.rating) : "",
+      expiry: p.expiry ?? "",
+      image_url: p.image_url ?? "",
+    });
+    setModal(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) {
+      Alert.alert("Name required", "Please enter a product name.");
+      return;
+    }
+    if (form.expiry && !/^\d{4}-\d{2}-\d{2}$/.test(form.expiry.trim())) {
+      Alert.alert("Invalid date", "Use the format YYYY-MM-DD for expiry, or leave it blank.");
+      return;
+    }
+    const payload = {
+      name: form.name.trim(),
+      price: parseFloat(form.price) || 0,
+      stock_count: parseInt(form.stock_count) || 0,
+      rating: Math.min(5, parseFloat(form.rating) || 0),
+      expiry: form.expiry.trim() || null,
+      image_url: form.image_url.trim() || null,
+    };
+    setSaving(true);
+    const { error } = editingId
+      ? await updateShopProduct(editingId, payload)
+      : await addShopProduct(payload);
+    setSaving(false);
+    if (error) {
+      Alert.alert(
+        "Couldn't save",
+        typeof error === "string" ? error : error?.message ?? "Please try again."
+      );
+      return;
+    }
+    setModal(false);
+    await load();
+  };
+
+  const handleDelete = (p: ShopProduct) => {
+    Alert.alert("Delete product", `Remove "${p.name}" from your shop?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const { error } = await deleteShopProduct(p.id);
+          if (error) {
+            Alert.alert("Couldn't delete", error?.message ?? "Please try again.");
+            return;
+          }
+          setProducts((prev) => prev.filter((x) => x.id !== p.id));
+        },
+      },
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#15803d" />
+      </View>
+    );
+  }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "#f9fafb" }}
-      contentContainerStyle={{ padding: 14, paddingBottom: 60 }}
-    >
-      {/* Stats header */}
-      <View style={styles.statsCard}>
-        <StatPill value={stats.total} label="Products" color="#111827" />
-        <View style={styles.divider} />
-        <StatPill value={stats.outOfStock} label="Out of stock" color="#dc2626" />
-        <View style={styles.divider} />
-        <StatPill value={stats.expiringSoon} label="Expiring soon" color="#b45309" />
-      </View>
+    <View style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+      <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 90 }}>
+        {/* Stats header */}
+        <View style={styles.statsCard}>
+          <StatPill value={stats.total} label="Products" color="#111827" />
+          <View style={styles.divider} />
+          <StatPill value={stats.outOfStock} label="Out of stock" color="#dc2626" />
+          <View style={styles.divider} />
+          <StatPill value={stats.expiringSoon} label="Expiring soon" color="#b45309" />
+        </View>
 
-      {/* Search */}
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={18} color="#9ca3af" />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search products"
-          placeholderTextColor="#9ca3af"
-          style={styles.searchInput}
-        />
-        {query.length > 0 && (
-          <Ionicons name="close-circle" size={18} color="#9ca3af" onPress={() => setQuery("")} />
+        {/* Search */}
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={18} color="#9ca3af" />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search products"
+            placeholderTextColor="#9ca3af"
+            style={styles.searchInput}
+          />
+          {query.length > 0 && (
+            <Ionicons name="close-circle" size={18} color="#9ca3af" onPress={() => setQuery("")} />
+          )}
+        </View>
+
+        {products.length === 0 ? (
+          <View style={{ alignItems: "center", marginTop: 50, paddingHorizontal: 20 }}>
+            <Ionicons name="cube-outline" size={48} color="#d1d5db" />
+            <Text style={{ color: "#6b7280", fontSize: 15, fontWeight: "600", marginTop: 12 }}>
+              No products yet
+            </Text>
+            <Text style={{ color: "#9ca3af", fontSize: 13, textAlign: "center", marginTop: 4 }}>
+              Tap the + button to add your first product to the shop.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {filtered.map((item) => {
+              const stock = stockMeta(item.stock_count);
+              const exp = expiryMeta(item.expiry);
+              return (
+                <View style={styles.card} key={item.id}>
+                  <Image
+                    source={{
+                      uri:
+                        item.image_url ||
+                        "https://placehold.co/200x110?text=No+Image&font=roboto",
+                    }}
+                    style={styles.image}
+                  />
+                  <Text style={styles.title} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.price}>Rs {item.price}</Text>
+                    <View style={styles.ratingRow}>
+                      <Ionicons name="star" size={12} color="#f59e0b" />
+                      <Text style={styles.rating}>{(item.rating || 0).toFixed(1)}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.badge, { backgroundColor: stock.bg }]}>
+                    <Text style={[styles.badgeText, { color: stock.color }]}>{stock.label}</Text>
+                  </View>
+                  <View style={[styles.badge, { backgroundColor: exp.bg, marginTop: 5 }]}>
+                    <Text style={[styles.badgeText, { color: exp.color }]}>{exp.label}</Text>
+                  </View>
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity onPress={() => openEdit(item)} style={styles.actionBtn}>
+                      <Ionicons name="create-outline" size={18} color="#15803d" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionBtn}>
+                      <Ionicons name="trash-outline" size={18} color="#dc2626" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         )}
-      </View>
 
-      {/* Grid */}
-      <View style={styles.grid}>
-        {filtered.map((item) => {
-          const stock = stockMeta(item.stock_count);
-          const exp = expiryMeta(item.expiry);
-          return (
-            <View style={styles.card} key={item.key}>
-              <Image source={{ uri: item.imgsrc }} style={styles.image} />
-              <Text style={styles.title} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.price}>Rs {item.price}</Text>
-                <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={12} color="#f59e0b" />
-                  <Text style={styles.rating}>{item.rating.toFixed(1)}</Text>
+        {products.length > 0 && filtered.length === 0 && (
+          <Text style={{ textAlign: "center", color: "#9ca3af", marginTop: 30 }}>
+            No products match "{query}".
+          </Text>
+        )}
+      </ScrollView>
+
+      {/* Floating add button */}
+      <TouchableOpacity style={styles.fab} onPress={openAdd} activeOpacity={0.85}>
+        <Ionicons name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Add / edit modal */}
+      <Modal visible={modal} transparent animationType="slide" onRequestClose={() => setModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {editingId ? "Edit Product" : "Add Product"}
+            </Text>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Field label="Name *">
+                <TextInput
+                  value={form.name}
+                  onChangeText={(v) => setForm((f) => ({ ...f, name: v }))}
+                  placeholder="e.g. Lays"
+                  placeholderTextColor="#9ca3af"
+                  style={styles.input}
+                />
+              </Field>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Field label="Price (Rs)">
+                    <TextInput
+                      value={form.price}
+                      onChangeText={(v) => setForm((f) => ({ ...f, price: v }))}
+                      placeholder="0"
+                      placeholderTextColor="#9ca3af"
+                      keyboardType="numeric"
+                      style={styles.input}
+                    />
+                  </Field>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Field label="Stock">
+                    <TextInput
+                      value={form.stock_count}
+                      onChangeText={(v) => setForm((f) => ({ ...f, stock_count: v }))}
+                      placeholder="0"
+                      placeholderTextColor="#9ca3af"
+                      keyboardType="numeric"
+                      style={styles.input}
+                    />
+                  </Field>
                 </View>
               </View>
-              <View style={[styles.badge, { backgroundColor: stock.bg }]}>
-                <Text style={[styles.badgeText, { color: stock.color }]}>{stock.label}</Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Field label="Rating (0-5)">
+                    <TextInput
+                      value={form.rating}
+                      onChangeText={(v) => setForm((f) => ({ ...f, rating: v }))}
+                      placeholder="0"
+                      placeholderTextColor="#9ca3af"
+                      keyboardType="numeric"
+                      style={styles.input}
+                    />
+                  </Field>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Field label="Expiry">
+                    <TextInput
+                      value={form.expiry}
+                      onChangeText={(v) => setForm((f) => ({ ...f, expiry: v }))}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#9ca3af"
+                      style={styles.input}
+                    />
+                  </Field>
+                </View>
               </View>
-              <View style={[styles.badge, { backgroundColor: exp.bg, marginTop: 5 }]}>
-                <Text style={[styles.badgeText, { color: exp.color }]}>{exp.label}</Text>
-              </View>
+              <Field label="Image URL (optional)">
+                <TextInput
+                  value={form.image_url}
+                  onChangeText={(v) => setForm((f) => ({ ...f, image_url: v }))}
+                  placeholder="https://…"
+                  placeholderTextColor="#9ca3af"
+                  autoCapitalize="none"
+                  style={styles.input}
+                />
+              </Field>
+            </ScrollView>
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 10 }}>
+              <TouchableOpacity onPress={() => setModal(false)} style={{ paddingHorizontal: 16, paddingVertical: 11 }}>
+                <Text style={{ color: "#6b7280", fontWeight: "600" }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={saving}
+                style={{
+                  backgroundColor: "#15803d",
+                  borderRadius: 10,
+                  paddingHorizontal: 20,
+                  paddingVertical: 11,
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "700" }}>
+                  {saving ? "Saving…" : editingId ? "Update" : "Add"}
+                </Text>
+              </TouchableOpacity>
             </View>
-          );
-        })}
-      </View>
-
-      {filtered.length === 0 && (
-        <Text style={{ textAlign: "center", color: "#9ca3af", marginTop: 30 }}>
-          No products match "{query}".
-        </Text>
-      )}
-    </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
+
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <View style={{ marginBottom: 12 }}>
+    <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 5 }}>
+      {label}
+    </Text>
+    {children}
+  </View>
+);
 
 const styles = StyleSheet.create({
   statsCard: {
@@ -201,6 +442,56 @@ const styles = StyleSheet.create({
   rating: { fontSize: 12, color: "#6b7280", marginLeft: 3, fontWeight: "600" },
   badge: { width: "100%", paddingVertical: 4, borderRadius: 8, alignItems: "center" },
   badgeText: { fontSize: 11, fontWeight: "700" },
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    width: "100%",
+    marginTop: 8,
+    gap: 6,
+  },
+  actionBtn: {
+    padding: 6,
+    backgroundColor: "#f9fafb",
+    borderRadius: 8,
+  },
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 28,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#15803d",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "85%",
+  },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 14 },
+  input: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#111827",
+  },
 });
 
 export default ShopInterface;
