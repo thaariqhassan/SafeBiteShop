@@ -48,19 +48,32 @@ const LabelScan = () => {
     setPhase("processing");
     try {
       setStatus("Capturing…");
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.7 });
-      if (!photo?.uri) throw new Error("capture failed");
-
-      // Downscale to keep upload small and within free-tier token limits.
-      const rendered = await ImageManipulator.manipulate(photo.uri)
-        .resize({ width: 1080 })
-        .renderAsync();
-      const out = await rendered.saveAsync({
-        compress: 0.6,
-        format: SaveFormat.JPEG,
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.6,
         base64: true,
       });
-      const dataUrl = `data:image/jpeg;base64,${out.base64}`;
+      if (!photo?.uri) throw new Error("Could not capture photo");
+
+      // Downscale to keep the upload small and within free-tier token limits.
+      // If manipulation isn't available (e.g. Expo Go), fall back to the raw
+      // base64 the camera already produced so the feature still works.
+      setStatus("Preparing image…");
+      let base64: string | null = photo.base64 ?? null;
+      try {
+        const rendered = await ImageManipulator.manipulate(photo.uri)
+          .resize({ width: 1080 })
+          .renderAsync();
+        const out = await rendered.saveAsync({
+          compress: 0.6,
+          format: SaveFormat.JPEG,
+          base64: true,
+        });
+        if (out.base64) base64 = out.base64;
+      } catch (manipErr) {
+        console.warn("Image resize failed, using original capture:", manipErr);
+      }
+      if (!base64) throw new Error("Could not process the captured photo");
+      const dataUrl = `data:image/jpeg;base64,${base64}`;
 
       setStatus("Reading the label…");
       const product = await scanLabel(dataUrl);
@@ -106,8 +119,13 @@ const LabelScan = () => {
         profileName: summary.profileName,
       });
       setPhase("result");
-    } catch (e) {
-      setError("Something went wrong reading the label. Please try again.");
+    } catch (e: any) {
+      console.error("Label scan error:", e);
+      setError(
+        e?.message
+          ? `Error: ${e.message}`
+          : "Something went wrong reading the label. Please try again."
+      );
       setPhase("camera");
     }
   };
