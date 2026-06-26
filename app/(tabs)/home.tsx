@@ -79,7 +79,7 @@ const index = () => {
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={{
-          height: "56%",
+          height: "50%",
           width: "100%",
           justifyContent: "center",
           alignItems: "center",
@@ -101,6 +101,7 @@ const index = () => {
               <TouchableOpacity
                 key={m}
                 onPress={() => setScanMode(m)}
+                activeOpacity={1}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
@@ -131,7 +132,7 @@ const index = () => {
         </View>
 
         <TouchableOpacity
-          className="w-[270px] h-[260px] rounded-lg flex items-center justify-center"
+          className="w-[250px] h-[250px] rounded-lg flex items-center justify-center"
           onPress={() => router.push(scanMode === "menu" ? "/menu-scan" : "/scan")}
         >
           <Animated.View
@@ -145,12 +146,12 @@ const index = () => {
           >
             <Image
               source={qr2}
-              className="w-[260px] h-[274px] rounded-3xl"
+              className="w-[230px] h-[240px] rounded-3xl"
               resizeMode="cover"
             />
           </Animated.View>
         </TouchableOpacity>
-        <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15, marginTop: 8 }}>
+        <Text style={{ color: "#000000", fontWeight: "700", fontSize: 17, marginTop: 10 }}>
           {scanMode === "menu" ? "Tap to scan a menu" : "Tap to scan a product"}
         </Text>
       </LinearGradient>

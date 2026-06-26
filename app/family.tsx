@@ -53,7 +53,7 @@ const ChipGroup = ({
           key={o}
           onPress={() => onToggle(o)}
           style={{
-            backgroundColor: selected.includes(o) ? "#00C897" : "#e5e7eb",
+            backgroundColor: selected.includes(o) ? "#15803d" : "#e5e7eb",
             borderRadius: 20,
             paddingHorizontal: 10,
             paddingVertical: 6,
@@ -335,7 +335,7 @@ const family = () => {
                   setForm((f) => ({ ...f, age_group: f.age_group === ag ? "" : ag }))
                 }
                 style={{
-                  backgroundColor: form.age_group === ag ? "#00C897" : "#e5e7eb",
+                  backgroundColor: form.age_group === ag ? "#15803d" : "#e5e7eb",
                   borderRadius: 20,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
