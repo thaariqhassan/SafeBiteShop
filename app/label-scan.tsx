@@ -31,6 +31,7 @@ const num = (v: number | null) => (v === null || v === undefined ? "N/A" : v);
 const LabelScan = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
+  const [ready, setReady] = useState(false);
   const [phase, setPhase] = useState<Phase>("camera");
   const [status, setStatus] = useState("Reading the label…");
   const [error, setError] = useState("");
@@ -39,17 +40,19 @@ const LabelScan = () => {
   const reset = () => {
     setResult(null);
     setError("");
+    setReady(false);
     setPhase("camera");
   };
 
   const capture = async () => {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current || !ready) return;
     setError("");
+    setReady(false);
     setPhase("processing");
     try {
       setStatus("Capturing…");
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.6,
+        quality: 0.5,
         base64: true,
       });
       if (!photo?.uri) throw new Error("Could not capture photo");
@@ -253,7 +256,11 @@ const LabelScan = () => {
   // --- Camera ---
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} />
+      <CameraView
+        ref={cameraRef}
+        style={StyleSheet.absoluteFillObject}
+        onCameraReady={() => setReady(true)}
+      />
       <View style={styles.overlay} pointerEvents="box-none">
         <View style={styles.tipBox}>
           <Text style={styles.tipText}>
@@ -265,9 +272,14 @@ const LabelScan = () => {
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : null}
-        <TouchableOpacity style={styles.shutter} onPress={capture}>
+        <TouchableOpacity
+          style={[styles.shutter, !ready && { opacity: 0.4 }]}
+          onPress={capture}
+          disabled={!ready}
+        >
           <View style={styles.shutterInner} />
         </TouchableOpacity>
+        {!ready && <Text style={styles.readyHint}>Starting camera…</Text>}
       </View>
     </View>
   );
@@ -297,6 +309,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   shutterInner: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#15803d" },
+  readyHint: { color: "#fff", textAlign: "center", fontSize: 12, marginBottom: 16 },
   banner: { flexDirection: "row", alignItems: "center", borderRadius: 14, padding: 16, marginBottom: 14 },
   productName: { fontSize: 20, fontWeight: "800", color: "#111827" },
   card: {
