@@ -11,6 +11,7 @@ import { useLocalSearchParams, useNavigation } from "expo-router";
 import handleSummary, { SummaryResult } from "../services/summary";
 import { MedicationWarning } from "@/constants/medicationInteractions";
 import { logNutrition } from "../services/nutritionLog";
+import { cacheProduct, getCachedProduct, updateCachedSummary } from "../services/scanCache";
 
 export interface ProductData {
   product_name: string;
@@ -41,50 +42,73 @@ const ProductSummary = () => {
   const [summaryLoading, setSummaryLoading] = useState<boolean>(true);
   const [medicationWarnings, setMedicationWarnings] = useState<MedicationWarning[]>([]);
   const [profileName, setProfileName] = useState<string>("");
+  const [fromCache, setFromCache] = useState(false);
   const [logged, setLogged] = useState(false);
   const [logLoading, setLogLoading] = useState(false);
 
   const navigation = useNavigation();
   useEffect(() => {
     const fetchData = async () => {
+      const applyProduct = (p: any) => {
+        setProductData(p);
+        setSummData({
+          product_name: p?.product_name || "Unknown Product",
+          ingredients: p?.ingredients_text || "Not available",
+          allergens: p?.allergens || "None listed",
+          additives: p?.additives_tags || [],
+          nutritional_info: {
+            sugar: p?.nutriments?.sugars_100g || "N/A",
+            fat: p?.nutriments?.fat_100g || "N/A",
+            salt: p?.nutriments?.salt_100g || "N/A",
+            calories: p?.nutriments?.energy_kcal_100g || "N/A",
+            proteins: p?.nutriments?.proteins_100g || "N/A",
+          },
+          labels: p?.labels_tags || [],
+          nova_score: p?.nova_group || 0,
+          nutrition_grade: p?.nutrition_grades || "N/A",
+        });
+        setImgUri(
+          p?.selected_images?.front?.display?.fr ??
+            p?.selected_images?.front?.display?.en ??
+            (p?.selected_images?.front?.display?.default ||
+              p?.image_url ||
+              "https://placehold.co/360x260?text=No+Image&font=roboto"),
+        );
+        navigation.setOptions({ title: p?.product_name || "Product Info" });
+      };
+
       try {
         const res = await fetch(
           `https://world.openfoodfacts.org/api/v0/product/${id}.json`,
         );
         const data = await res.json();
         if (data.status === 1) {
-          setProductData(data.product);
-          setSummData({
-            product_name: data.product?.product_name || "Unknown Product",
-            ingredients: data.product?.ingredients_text || "Not available",
-            allergens: data.product?.allergens || "None listed",
-            additives: data.product?.additives_tags || [],
-            nutritional_info: {
-              sugar: data.product?.nutriments?.sugars_100g || "N/A",
-              fat: data.product?.nutriments?.fat_100g || "N/A",
-              salt: data.product?.nutriments?.salt_100g || "N/A",
-              calories: data.product?.nutriments?.energy_kcal_100g || "N/A",
-              proteins: data.product?.nutriments?.proteins_100g || "N/A",
-            },
-            labels: data.product?.labels_tags || [],
-            nova_score: data.product?.nova_group || 0,
-            nutrition_grade: data.product?.nutrition_grades || "N/A",
+          applyProduct(data.product);
+          // save raw product to cache (summary saved separately after AI call)
+          await cacheProduct({
+            id: String(id),
+            product: data.product,
+            summary: null,
+            medicationWarnings: [],
+            profileName: "",
+            cachedAt: Date.now(),
           });
-          setImgUri(
-            data.product?.selected_images?.front?.display?.fr ??
-              data.product?.selected_images?.front?.display?.en ??
-              (data.product?.selected_images?.front?.display?.default ||
-                data.product?.image_url ||
-                "https://placehold.co/360x260?text=No+Image&font=roboto"),
-          );
         } else {
           setNotFound(true);
         }
-        navigation.setOptions({
-          title: data.product?.product_name || "Product Info",
-        });
-      } catch (error) {
-        console.error("Error fetching product data:", error);
+      } catch {
+        // network failure — try local cache
+        const cached = await getCachedProduct(String(id));
+        if (cached) {
+          applyProduct(cached.product);
+          setSummaryData(cached.summary);
+          setMedicationWarnings(cached.medicationWarnings);
+          setProfileName(cached.profileName);
+          setFromCache(true);
+          setSummaryLoading(false);
+        } else {
+          setNotFound(true);
+        }
       } finally {
         setLoading(false);
       }
@@ -94,17 +118,23 @@ const ProductSummary = () => {
 
   useEffect(() => {
     const fetchSummary = async () => {
+      if (fromCache || !summData) return;
       setSummaryLoading(true);
-      if (summData) {
-        const result = await handleSummary(summData);
-        setSummaryData(result.summary);
-        setMedicationWarnings(result.medicationWarnings);
-        setProfileName(result.profileName);
-        setSummaryLoading(false);
-      }
+      const result = await handleSummary(summData);
+      setSummaryData(result.summary);
+      setMedicationWarnings(result.medicationWarnings);
+      setProfileName(result.profileName);
+      // persist summary so the next offline visit has it
+      await updateCachedSummary(
+        String(id),
+        result.summary,
+        result.medicationWarnings,
+        result.profileName
+      );
+      setSummaryLoading(false);
     };
     fetchSummary();
-  }, [summData]);
+  }, [summData, fromCache]);
 
   return (
     <>
@@ -161,6 +191,24 @@ const ProductSummary = () => {
                 {productData.product_name || "Unknown Product"}
               </Text>
             </View>
+            {fromCache && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#fefce8",
+                  borderRadius: 6,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  marginBottom: 6,
+                  alignSelf: "flex-start",
+                }}
+              >
+                <Text style={{ fontSize: 12, color: "#92400e" }}>
+                  📦 Viewing cached version · No internet connection
+                </Text>
+              </View>
+            )}
             {/* Nutrition Grade + Nova */}
             <Text className="text-md text-gray-700  mb-2">
               🧪 Nutrition Grade:{" "}
