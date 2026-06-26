@@ -17,38 +17,46 @@ const lists = (
   selected: string[],
   setSelected: React.Dispatch<React.SetStateAction<string[]>>,
 ) => {
-  return Arr.map((e) => (
-    <TouchableOpacity
-      key={e}
-      onPress={() => toggleElement(e, selected, setSelected)}
-      style={{
-        backgroundColor: selected.includes(e) ? "#00C897" : "#E0E0E0",
-        borderRadius: 20,
-        padding: 10,
-        margin: 5,
-      }}
-    >
-      <Text className="text-md">{e}</Text>
-    </TouchableOpacity>
-  ));
+  return Arr.map((e) => {
+    const isSelected = selected.includes(e);
+    return (
+      <TouchableOpacity
+        key={e}
+        onPress={() => toggleElement(e, selected, setSelected)}
+        style={{
+          backgroundColor: isSelected ? "#15803d" : "#E0E0E0",
+          borderRadius: 20,
+          padding: 10,
+          margin: 5,
+        }}
+      >
+        <Text style={{ fontSize: 14, color: isSelected ? "#ffffff" : "#1f2937" }}>
+          {e}
+        </Text>
+      </TouchableOpacity>
+    );
+  });
 };
 const singleAnswer = (
   e: string,
   selected: string | undefined,
   setSelected: React.Dispatch<React.SetStateAction<string | undefined>>,
 ) => {
+  const isSelected = selected === e;
   return (
     <TouchableOpacity
       key={e}
       onPress={() => selectElement(e, selected, setSelected)}
       style={{
-        backgroundColor: selected?.includes(e) ? "#00C897" : "#E0E0E0",
+        backgroundColor: isSelected ? "#15803d" : "#E0E0E0",
         borderRadius: 20,
         padding: 10,
         margin: 5,
       }}
     >
-      <Text className="text-md">{e}</Text>
+      <Text style={{ fontSize: 14, color: isSelected ? "#ffffff" : "#1f2937" }}>
+        {e}
+      </Text>
     </TouchableOpacity>
   );
 };

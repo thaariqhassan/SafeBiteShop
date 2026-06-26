@@ -20,12 +20,11 @@ const Styles = StyleSheet.create({
   },
 });
 
-const router = useRouter();
-const goToShop = () => {
-  router.push("/shop_interface");
-};
-
 const profile = () => {
+  const router = useRouter();
+  const goToShop = () => {
+    router.push("/shop_interface");
+  };
   const [user, setUser] = React.useState<any>(null);
   const [shop, setShop] = React.useState<any>(null);
   const [cust, setCust] = React.useState<any>(null);

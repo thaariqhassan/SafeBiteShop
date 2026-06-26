@@ -72,7 +72,6 @@ const _layout = () => {
             <TabIcon focused={focused} icon={"home"} title="Home" />
           ),
           headerShown: false,
-          animation: "fade",
         }}
       />
       <Tabs.Screen
@@ -84,7 +83,6 @@ const _layout = () => {
           headerTitle: "Nutrition Tracker",
           headerStyle: { backgroundColor: "#004d00" },
           headerTintColor: "#ffffff",
-          animation: "fade",
         }}
       />
       <Tabs.Screen
@@ -98,7 +96,6 @@ const _layout = () => {
             backgroundColor: "#004d00",
           },
           headerTintColor: "#ffffff",
-          animation: "fade",
         }}
       />
     </Tabs>

@@ -1,32 +1,28 @@
 import handleRecommendation from "@/services/recommendation";
-import { param } from "@/backend/routes/summary";
+import { getActiveProfile } from "@/services/familyProfile";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { FlatList, TouchableOpacity } from "react-native";
 import { View, Text, ActivityIndicator, Image } from "react-native";
 
+// On-device cache so the home screen loads instantly and does not re-hit the
+// backend (and OpenFoodFacts) on every visit. Keyed by the active profile so
+// switching family members shows the right list. Refreshed after TTL.
+const CACHE_PREFIX = "safebite_reco_v1_";
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
 const Recommendation = () => {
-  const [recommendation, setRecommendation] = useState<string[] | null>(null);
   const [productDetails, setProductDetails] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchRecomm = async () => {
-      setLoading(true);
-      const result = await handleRecommendation();
-      setRecommendation(result.finalProductIds || result.productIds || []);
-      setLoading(false);
-    };
-    fetchRecomm();
-  }, []);
+    let cancelled = false;
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      if (!recommendation || recommendation.length === 0) return;
-      setLoading(true);
+    const fetchProductDetails = async (ids: string[]) => {
       const details = await Promise.all(
-        recommendation.map(async (id) => {
+        ids.map(async (id) => {
           try {
             const res = await fetch(
               `https://world.openfoodfacts.org/api/v2/product/${id}`,
@@ -45,15 +41,58 @@ const Recommendation = () => {
           return null;
         }),
       );
-      setProductDetails(details.filter(Boolean));
-      // Boolean is used as a callback function to filter().
-      // Falsy values include: null, undefined, false, 0, "" (empty string), and NaN.
-      // So this removes anything that's not a valid truthy item.
-      setLoading(false);
+      return details.filter(Boolean);
     };
 
-    fetchDetails();
-  }, [recommendation]);
+    const load = async () => {
+      setLoading(true);
+      const profile = await getActiveProfile();
+      const cacheKey =
+        CACHE_PREFIX + (profile.familyMemberId ?? "self");
+
+      // 1. Serve from cache immediately if fresh.
+      try {
+        const raw = await AsyncStorage.getItem(cacheKey);
+        if (raw) {
+          const cached = JSON.parse(raw);
+          if (
+            cached.cachedAt &&
+            Date.now() - cached.cachedAt < CACHE_TTL_MS &&
+            Array.isArray(cached.details)
+          ) {
+            if (!cancelled) {
+              setProductDetails(cached.details);
+              setLoading(false);
+            }
+            return;
+          }
+        }
+      } catch {
+        // ignore corrupt cache and fall through to network
+      }
+
+      // 2. Otherwise fetch recommendation IDs + product details, then cache.
+      const result = await handleRecommendation();
+      const ids: string[] = result.finalProductIds || result.productIds || [];
+      const details = await fetchProductDetails(ids);
+      if (cancelled) return;
+      setProductDetails(details);
+      setLoading(false);
+      try {
+        await AsyncStorage.setItem(
+          cacheKey,
+          JSON.stringify({ cachedAt: Date.now(), details }),
+        );
+      } catch {
+        // best-effort cache; ignore storage errors
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <View style={{ padding: 5 }}>

@@ -5,6 +5,7 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
@@ -376,7 +377,16 @@ const ProductSummary = () => {
                   }
                 );
                 setLogLoading(false);
-                if (!error) setLogged(true);
+                if (!error) {
+                  setLogged(true);
+                } else {
+                  Alert.alert(
+                    "Couldn't add to diary",
+                    typeof error === "string"
+                      ? error
+                      : (error as any)?.message ?? "Please try again."
+                  );
+                }
               }}
             >
               <Text

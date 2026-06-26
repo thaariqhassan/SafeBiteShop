@@ -135,6 +135,11 @@ const family = () => {
       await loadData();
       setForm({ ...EMPTY_FORM });
       setShowForm(false);
+    } else {
+      Alert.alert(
+        "Couldn't save member",
+        typeof error === "string" ? error : error?.message ?? "Please try again."
+      );
     }
     setSaving(false);
   };
