@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import { getActiveProfile } from "@/services/familyProfile";
 import {
   ActivityIndicator,
@@ -137,30 +137,29 @@ const profile = () => {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
 
-  useEffect(() => {
-    getActiveProfile().then((p) => {
-      setActiveProfileName(p.name);
-      setIsProfileSelf(p.isSelf);
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      getActiveProfile().then((p) => {
+        setActiveProfileName(p.name);
+        setIsProfileSelf(p.isSelf);
+      });
 
-  useEffect(() => {
-    const fetchD = async () => {
-      setLoading(true);
-      const { data: u } = await supabase.auth.getUser();
-      const [shopRes, custRes, usersRes] = await Promise.all([
-        supabase.from("Shopkeepers").select("*").eq("id", u?.user?.id).single(),
-        supabase.from("Customerdetails").select("*").eq("id", u?.user?.id).single(),
-        supabase.from("Users").select("*").eq("id", u?.user?.id).single(),
-      ]);
-      setUser(u);
-      setShop(shopRes.data);
-      setCust(custRes.data);
-      setUsers(usersRes.data);
-      setLoading(false);
-    };
-    fetchD();
-  }, []);
+      const fetchD = async () => {
+        const { data: u } = await supabase.auth.getUser();
+        const [shopRes, custRes, usersRes] = await Promise.all([
+          supabase.from("Shopkeepers").select("*").eq("id", u?.user?.id).single(),
+          supabase.from("Customerdetails").select("*").eq("id", u?.user?.id).single(),
+          supabase.from("Users").select("*").eq("id", u?.user?.id).single(),
+        ]);
+        setUser(u);
+        setShop(shopRes.data);
+        setCust(custRes.data);
+        setUsers(usersRes.data);
+        setLoading(false);
+      };
+      fetchD();
+    }, [])
+  );
 
   const isShopkeeper = users?.isShopkeeper;
 
@@ -268,6 +267,12 @@ const profile = () => {
           <ChipRow title="Dietary Restrictions" items={cust?.dietary_restrictions} />
           <ChipRow title="Medications" items={cust?.medications} />
         </View>
+        <Row
+          icon="create-outline"
+          label="Edit Health Profile"
+          onPress={() => router.push("/edit-health")}
+          last
+        />
       </Card>
 
       {/* Account */}
