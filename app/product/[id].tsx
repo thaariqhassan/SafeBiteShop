@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import handleSummary, { SummaryResult } from "@/services/summary";
 import { MedicationWarning } from "@/constants/medicationInteractions";
 import { logNutrition } from "@/services/nutritionLog";
@@ -175,8 +176,27 @@ const ProductSummary = () => {
           <ActivityIndicator size="large" color="#0000ff" />
         </View>
       ) : notFound ? (
-        <View className="w-screen h-screen flex items-center justify-center">
-          <Text>Product not found</Text>
+        <View className="w-screen h-screen flex items-center justify-center px-8">
+          <Text className="text-lg font-semibold text-gray-800">Product not found</Text>
+          <Text className="text-gray-500 text-center mt-2 mb-5">
+            This barcode isn't in our database — but you can read its label instead.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace("/label-scan")}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#15803d",
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderRadius: 30,
+            }}
+          >
+            <Ionicons name="document-text-outline" size={18} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "700", marginLeft: 8 }}>
+              Snap the label instead
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <View className="w-screen h-screen p-4 bg-white ">

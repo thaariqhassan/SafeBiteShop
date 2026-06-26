@@ -193,4 +193,53 @@ Rules: exactly ${days} days, 3 meals each, short strings, accurate calorie estim
   return extractJson(result.choices[0].message.content, "object");
 };
 
-module.exports = { askAI, consultAi, generateRecipes, generateMealPlan };
+// Reads a food-label photo with a vision model and extracts structured product
+// data, so products without a barcode (or missing from OpenFoodFacts) can still
+// be analysed by the normal safety pipeline.
+const analyzeLabelImage = async (imageDataUrl) => {
+  const result = await groq.chat.completions.create({
+    model: "meta-llama/llama-4-scout-17b-16e-instruct",
+    temperature: 0.2,
+    max_tokens: 1500,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You read food packaging labels from images and output ONLY valid JSON. Never invent ingredients you cannot see.",
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `Read this food product label and return ONLY this JSON (no markdown, no commentary):
+{
+  "product_name": "best-guess product name, or 'Unknown Product'",
+  "ingredients_text": "the full ingredients list exactly as written",
+  "allergens": "allergens stated on the label (e.g. from 'Contains:' / 'May contain:'), or empty string",
+  "additives_tags": ["E-numbers or named additives if listed"],
+  "nutriments": {
+    "energy-kcal_100g": number or null,
+    "sugars_100g": number or null,
+    "fat_100g": number or null,
+    "salt_100g": number or null,
+    "proteins_100g": number or null
+  }
+}
+Extract per-100g nutrition values only if a nutrition table is visible. If the image is not a readable food label, return {"error":"unreadable"}.`,
+          },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ],
+      },
+    ],
+  });
+  return extractJson(result.choices[0].message.content, "object");
+};
+
+module.exports = {
+  askAI,
+  consultAi,
+  generateRecipes,
+  generateMealPlan,
+  analyzeLabelImage,
+};

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Text, View, StyleSheet, Button } from "react-native";
+import { Text, View, StyleSheet, Button, TouchableOpacity } from "react-native";
 import { CameraView, Camera } from "expo-camera";
 import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function ScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -60,6 +61,13 @@ export default function ScanScreen() {
       {scanned && (
         <Button title={"Tap to Scan Again"} onPress={() => setScanned(false)} />
       )}
+      <TouchableOpacity
+        style={styles.labelBtn}
+        onPress={() => router.push("/label-scan")}
+      >
+        <Ionicons name="document-text-outline" size={18} color="#fff" />
+        <Text style={styles.labelBtnText}>No barcode? Snap the label</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -70,4 +78,18 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     justifyContent: "center",
   },
+  labelBtn: {
+    position: "absolute",
+    bottom: 40,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#15803d",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 30,
+    gap: 8,
+    elevation: 4,
+  },
+  labelBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });
