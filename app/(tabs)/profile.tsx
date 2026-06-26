@@ -62,7 +62,7 @@ const profile = () => {
   const allergies = cust?.allergies;
   const conditions = cust?.medical_conditions;
   const diet = cust?.dietary_restrictions;
-  const takesMedication = cust?.takes_medicine;
+  const medications: string[] = cust?.medications ?? [];
   const list = (str: string[]) =>
     str.map((e: any) => (
       <TouchableOpacity
@@ -136,13 +136,13 @@ const profile = () => {
             )}
           </View>
           <Text className="text-center font-bold underline">
-            Takes Medication
+            Medications
           </Text>
           <View className="flex-row flex-wrap justify-center">
-            {takesMedication ? (
-              <Text className="text-red-500">Yes</Text>
+            {medications.length > 0 ? (
+              list(medications)
             ) : (
-              <Text className="text-red-500">No Medication</Text>
+              <Text className="text-red-500">No Medications</Text>
             )}
           </View>
 

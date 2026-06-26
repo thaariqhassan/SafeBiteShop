@@ -1,5 +1,6 @@
 import {
   commonAllergies,
+  commonMedications,
   dietaryRestrictions,
   medicalConditions,
   questions,
@@ -129,7 +130,7 @@ const onboarding = () => {
   const [selectedAllergySeverity, setSelectedAllergySeverity] = useState<
     string | undefined
   >();
-  const [selectedYesNo, setSelectedYesNo] = useState<string | undefined>();
+  const [selectedMedications, setSelectedMedications] = useState<string[]>([]);
   const [error, setError] = useState("");
   async function handleSubmit() {
     const { error } = await setOnboardingDetails({
@@ -137,9 +138,9 @@ const onboarding = () => {
         allergies: selectedAllergies,
         medical_conditions: selectedMedicalConditions,
         dietary_restrictions: selectedDietaryRestrictions,
+        medications: selectedMedications,
         age_group: selectedAgeGroup,
         allergy_severity: selectedAllergySeverity,
-        takes_medicine: selectedYesNo == "Yes",
       },
     });
     if (error) {
@@ -186,11 +187,11 @@ const onboarding = () => {
           common={dietaryRestrictions}
           change={setSelectedDietaryRestrictions}
         />
-        <QuestionsComp2
+        <QuestionsComp1
           question={questions[3]}
-          value={selectedYesNo}
-          common={["Yes", "No"]}
-          change={setSelectedYesNo}
+          value={selectedMedications}
+          common={commonMedications}
+          change={setSelectedMedications}
         />
         <QuestionsComp2
           question={questions[4]}

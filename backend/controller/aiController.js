@@ -6,18 +6,22 @@ const groq = new Groq({
 });
 
 const askAI = async (productData, userProfile) => {
+  const medications = userProfile.medications?.length
+    ? userProfile.medications.join(", ")
+    : "None";
   const prompt = `
 User profile:
 - Allergies: ${userProfile.allergies.join(", ")}
 - Conditions: ${userProfile.conditions.join(", ")}
+- Medications: ${medications}
 
 Product data:
 ${JSON.stringify(productData, null, 2)}
 
 
-Summarize if this product is safe or risky for the user. Be brief but clear, and limit your response to a maximum of 70 words. Do not explain your reasoning. Only give the conclusion and, if necessary, a short suggestion or advice. Do NOT include markdown, code blocks, or bullet points.should have a heading "Overview from your data" in bold. 
+Summarize if this product is safe or risky for the user. Be brief but clear, and limit your response to a maximum of 70 words. If the user takes medications, mention any relevant food-drug interactions found in the product. Do not explain your reasoning. Only give the conclusion and, if necessary, a short suggestion or advice. Do NOT include markdown, code blocks, or bullet points.should have a heading "Overview from your data" in bold.
 
-As a second paragraph, write a general overview of the product that a 15-year-old can understand, using no more than 50 words.should have a heading "General Overview" in bold. 
+As a second paragraph, write a general overview of the product that a 15-year-old can understand, using no more than 50 words.should have a heading "General Overview" in bold.
 
 You may only use italic or bold styling that is compatible with React Native <Text> components. No other formatting is allowed.
 `;

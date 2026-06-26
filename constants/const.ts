@@ -41,6 +41,23 @@ export const dietaryRestrictions = [
   "Paleo",
   "None",
 ];
+export const commonMedications = [
+  "Warfarin (Coumadin)",
+  "Atorvastatin / Simvastatin (Statins)",
+  "Metformin",
+  "Lisinopril / ACE Inhibitors",
+  "Levothyroxine (Synthroid)",
+  "MAO Inhibitors (Phenelzine)",
+  "Doxycycline / Tetracycline",
+  "Digoxin",
+  "Amlodipine / Calcium Channel Blockers",
+  "Lithium",
+  "Prednisone / Corticosteroids",
+  "Ibuprofen / NSAIDs",
+  "Aspirin",
+  "Ciprofloxacin / Fluoroquinolones",
+  "None",
+];
 export const questions: { text: string; type: string; relatedTo: string }[] = [
   {
     text: "Do you have any food allergies?",
@@ -58,9 +75,9 @@ export const questions: { text: string; type: string; relatedTo: string }[] = [
     relatedTo: "dietaryRestrictions",
   },
   {
-    text: "Do you take any medication that interacts with food?",
-    type: "yesno",
-    relatedTo: "medicationInteractions",
+    text: "Which medications do you take? (Select all that apply)",
+    type: "list",
+    relatedTo: "medications",
   },
   {
     text: "How severe are your allergic reactions?",

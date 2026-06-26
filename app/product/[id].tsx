@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useLocalSearchParams, useNavigation } from "expo-router";
-import handleSummary from "../services/summary";
+import handleSummary, { SummaryResult } from "../services/summary";
+import { MedicationWarning } from "@/constants/medicationInteractions";
 
 export interface ProductData {
   product_name: string;
@@ -37,6 +38,7 @@ const ProductSummary = () => {
   const [summData, setSummData] = useState<ProductData>();
   const [summaryData, setSummaryData] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState<boolean>(true);
+  const [medicationWarnings, setMedicationWarnings] = useState<MedicationWarning[]>([]);
 
   const navigation = useNavigation();
   useEffect(() => {
@@ -90,8 +92,9 @@ const ProductSummary = () => {
     const fetchSummary = async () => {
       setSummaryLoading(true);
       if (summData) {
-        const summary = await handleSummary(summData);
-        setSummaryData(summary?.summary || null);
+        const result = await handleSummary(summData);
+        setSummaryData(result.summary);
+        setMedicationWarnings(result.medicationWarnings);
         setSummaryLoading(false);
       }
     };
@@ -231,6 +234,40 @@ const ProductSummary = () => {
             <Text className="text-gray-700">
               {productData.expiration_date || "Not available"}
             </Text>
+            {medicationWarnings.length > 0 && (
+              <View
+                style={{
+                  backgroundColor: "#fff1f2",
+                  borderLeftWidth: 4,
+                  borderLeftColor: "#dc2626",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginTop: 16,
+                }}
+              >
+                <Text
+                  style={{ color: "#991b1b", fontWeight: "bold", fontSize: 15, marginBottom: 8 }}
+                >
+                  💊 Medication Interaction Detected
+                </Text>
+                {medicationWarnings.map((w, i) => (
+                  <View key={i} style={{ marginBottom: 10 }}>
+                    <Text style={{ color: "#dc2626", fontWeight: "600", fontSize: 13 }}>
+                      {w.medication}
+                    </Text>
+                    <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
+                      Contains: {w.triggeredBy.join(", ")}
+                    </Text>
+                    <Text style={{ color: "#374151", fontSize: 12, marginTop: 2 }}>
+                      {w.reason}
+                    </Text>
+                  </View>
+                ))}
+                <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>
+                  Consult your doctor or pharmacist before consuming this product.
+                </Text>
+              </View>
+            )}
             <View className="mt-5">
               <Text className="text-lg font-semibold text-gray-800 mb-2">
                 AI Summary
