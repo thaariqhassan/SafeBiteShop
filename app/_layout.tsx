@@ -81,6 +81,16 @@ export default function RootLayout() {
             animationDuration: 500,
           }}
         />
+        <Stack.Screen
+          name="privacy"
+          options={{
+            headerTitle: "Privacy Policy",
+            headerStyle: { backgroundColor: "#004d00" },
+            headerTintColor: "#ffffff",
+            animation: "fade",
+            animationDuration: 500,
+          }}
+        />
       </Stack>
     </>
   );
