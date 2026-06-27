@@ -4,7 +4,7 @@ export default ({ config }) => ({
   ...config,
   name: "SafeBite",
   slug: "safeBite",
-  version: "1.0.0",
+  version: "2.0.1",
   orientation: "portrait",
   icon: "./assets/images/logos.png",
   scheme: "safebite",
@@ -57,8 +57,8 @@ export default ({ config }) => ({
   extra: {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-    eas: {
-      projectId: "e566b827-4513-46eb-ba27-e31db8cc5ddd",
-    },
+    "eas": {
+        "projectId": "cdcbe9db-330b-4f53-ad53-9eadab97935c"
+      }
   },
 });
