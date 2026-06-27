@@ -43,6 +43,12 @@ export default ({ config }) => ({
         backgroundColor: "#ffffff",
       },
     ],
+    [
+      "expo-notifications",
+      {
+        color: "#dc2626",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

@@ -40,6 +40,14 @@ Ensuring food safety is hard for both **consumers** and **shopkeepers**:
 - ⚠️ **Deterministic Allergen Matching** — a synonym map so a "Nuts" allergy is flagged by "almond"/"peanut", not only the literal word.
 - 👨‍👩‍👧 **Family Profiles** — one account, multiple health profiles; switch the active profile with one tap and every AI flow adapts.
 
+### 🔔 Proactive recall alerts
+
+SafeBite doesn't stop protecting you when you close the app. It remembers every product you've scanned and cross-checks them against the live **openFDA food recall feed**. If a product you've scanned gets recalled, you get a **push notification** — even with the app closed — and a red alert banner on Home.
+
+- 📡 **Live recall monitoring** — matches your scanned products against official recall data on every app open.
+- 🎯 **Profile-aware severity** — if the recall reason (e.g. *"undeclared peanuts"*) matches the active profile's allergies, the alert is escalated with a **"do not eat"** warning tied to that person.
+- 🛌 **Works in the background** — be warned about food already in your kitchen before you eat it.
+
 ### 🍳 Eat better
 
 - **Recipe Suggestions** — enter the ingredients you have → health-safe recipes that respect your allergies, diet, conditions and medications.
@@ -78,12 +86,14 @@ Ensuring food safety is hard for both **consumers** and **shopkeepers**:
 | **Mobile Frontend** | React Native (Expo 54), TypeScript, expo-router |
 | **Styling** | NativeWind (Tailwind CSS), React Native Reanimated |
 | **Camera & Imaging** | expo-camera, expo-image-picker, expo-image-manipulator |
+| **Notifications** | expo-notifications (local push for recall alerts) |
 | **Backend** | Node.js + Express.js (deployed on Render, with keep-alive ping) |
 | **AI — Text** | Groq: `llama-3.1-8b-instant` (summaries), `llama-3.3-70b-versatile` (recommendations, recipes, meal plans) |
 | **AI — Vision** | Groq: `meta-llama/llama-4-scout-17b-16e-instruct` (label & menu reading) |
 | **Database & Auth** | Supabase (PostgreSQL + Auth, row-level security) |
 | **Local Storage** | AsyncStorage — offline cache, active profile, streak, reco cache |
 | **Product Data** | Open Food Facts API |
+| **Recall Data** | openFDA Food Enforcement API |
 | **Build** | EAS (Expo Application Services) |
 
 ---
@@ -113,6 +123,7 @@ Supabase tables that power the app:
 5. **Condition-aware limits** — daily nutrition thresholds tighten automatically per condition, feeding the tracker and health score.
 6. **Family architecture** — the active profile is persisted in AsyncStorage and drives every AI flow.
 7. **Offline-first** — scans, recommendations and tips fall back to local cache.
+8. **Recall monitoring** — on each app open, scanned products are matched against the openFDA recall feed; a match fires a local push and a Home banner, escalated when the recall reason hits the active profile's allergies.
 
 ---
 
@@ -141,6 +152,8 @@ SafeBite/
 │   ├── summary.ts  recommendation.ts  familyProfile.ts  nutritionLog.ts
 │   ├── scanCache.ts  recipes.ts  alternatives.ts  healthScore.ts
 │   ├── healthTip.ts  labelScan.ts  menuScan.ts  shopProducts.ts
+│   ├── recall.ts                # recall matching against openFDA + scanned products
+│   ├── notifications.ts         # local push notifications (expo-notifications)
 ├── backend/
 │   ├── server.js
 │   ├── routes/                  # summary, recommendation, recipes,
@@ -226,9 +239,9 @@ Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopk
 - ✅ Snap-the-Label (vision scanning, no barcode needed)
 - ✅ Eat-Out Menu Scanner
 - ✅ Shopkeeper Inventory Management
+- ✅ Allergen Recall & Push Notifications
 - 🔜 Customer-facing "safe for me" shop view
 - 🔜 Read-aloud / accessibility verdict
-- 🔜 Allergen recall & push notifications
 
 ---
 

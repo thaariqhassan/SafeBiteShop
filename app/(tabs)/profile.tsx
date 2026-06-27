@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { getActiveProfile } from "@/services/familyProfile";
+import { runRecallScan, triggerDemoRecall } from "@/services/recall";
 import {
   ActivityIndicator,
   Alert,
@@ -185,6 +186,27 @@ const profile = () => {
     Alert.alert("Done", "Your password has been updated.");
   };
 
+  const checkRecallsNow = async () => {
+    const fresh = await runRecallScan();
+    if (fresh.length > 0) {
+      Alert.alert(
+        "Recall found",
+        `${fresh.length} product alert(s) — check the banner on your Home screen.`
+      );
+    } else {
+      Alert.alert("All clear", "No recalls match your scanned products right now.");
+    }
+  };
+
+  const simulateRecall = async () => {
+    await triggerDemoRecall();
+    await runRecallScan();
+    Alert.alert(
+      "Recall simulated",
+      "A notification was sent and the alert is now on your Home screen."
+    );
+  };
+
   const shareApp = async () => {
     try {
       await Share.share({
@@ -271,6 +293,24 @@ const profile = () => {
           icon="create-outline"
           label="Edit Health Profile"
           onPress={() => router.push("/edit-health")}
+          last
+        />
+      </Card>
+
+      {/* Safety alerts */}
+      <SectionLabel>Safety Alerts</SectionLabel>
+      <Card>
+        <Row
+          icon="notifications-outline"
+          iconColor="#dc2626"
+          label="Check for recalls now"
+          onPress={checkRecallsNow}
+        />
+        <Row
+          icon="flask-outline"
+          iconColor="#dc2626"
+          label="Simulate a recall (demo)"
+          onPress={simulateRecall}
           last
         />
       </Card>
