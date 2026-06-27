@@ -325,6 +325,33 @@ const index = () => {
           </View>
         ) : null}
       </ScrollView>
+
+      {/* Floating AI co-pilot launcher */}
+      <TouchableOpacity
+        onPress={() => router.push("/copilot")}
+        activeOpacity={0.85}
+        style={{
+          position: "absolute",
+          right: 18,
+          bottom: 28,
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: "#15803d",
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderRadius: 28,
+          shadowColor: "#000",
+          shadowOpacity: 0.25,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 6,
+        }}
+      >
+        <Ionicons name="sparkles" size={18} color="#ffffff" />
+        <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 14, marginLeft: 7 }}>
+          Ask Co-pilot
+        </Text>
+      </TouchableOpacity>
     </>
   );
 };
