@@ -39,3 +39,16 @@ yarn-error.*
 app-example
 .env
 eas.json
+
+# Editor
+.vscode/
+
+# Claude Code session data
+.claude/
+
+# Windows OS files
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
