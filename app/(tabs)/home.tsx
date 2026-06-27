@@ -18,6 +18,12 @@ import Recommendation from "@/components/recomentation";
 import { getActiveProfile } from "@/services/familyProfile";
 import { getAllCachedProducts } from "@/services/scanCache";
 import { getDailyTip } from "@/services/healthTip";
+import {
+  runRecallScan,
+  getActiveAlerts,
+  dismissAlert,
+  RecallAlert,
+} from "@/services/recall";
 
 interface RecentScan {
   id: string;
@@ -32,6 +38,7 @@ const index = () => {
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [tip, setTip] = useState<string>("");
   const [scanMode, setScanMode] = useState<"product" | "menu">("product");
+  const [recalls, setRecalls] = useState<RecallAlert[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,6 +47,12 @@ const index = () => {
         setIsProfileSelf(p.isSelf);
       });
       getDailyTip().then(setTip);
+      // Check the recall feed for anything matching scanned products, then show
+      // every still-active alert in the banner.
+      runRecallScan()
+        .catch(() => {})
+        .then(() => getActiveAlerts())
+        .then(setRecalls);
       getAllCachedProducts().then((entries) => {
         setRecentScans(
           entries.slice(0, 10).map((e) => {
@@ -72,6 +85,12 @@ const index = () => {
       true, // reverse on every cycle
     );
   }, []);
+
+  const handleDismissRecall = (id: string) => {
+    setRecalls((prev) => prev.filter((r) => r.id !== id));
+    dismissAlert(id);
+  };
+
   return (
     <>
       <LinearGradient
@@ -190,6 +209,52 @@ const index = () => {
             {isProfileSelf ? "My Profile" : activeProfileName} · Switch
           </Text>
         </TouchableOpacity>
+        {recalls.map((r) => (
+          <View
+            key={r.id}
+            style={{
+              backgroundColor: "#fef2f2",
+              borderWidth: 1,
+              borderColor: "#fecaca",
+              borderLeftWidth: 5,
+              borderLeftColor: "#dc2626",
+              borderRadius: 14,
+              padding: 14,
+              marginBottom: 12,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+              <Ionicons name="warning" size={20} color="#dc2626" />
+              <Text style={{ fontWeight: "800", color: "#b91c1c", fontSize: 14, marginLeft: 6, flex: 1 }}>
+                Recall: {r.productName}
+              </Text>
+              <TouchableOpacity onPress={() => handleDismissRecall(r.id)} hitSlop={10}>
+                <Ionicons name="close" size={18} color="#b91c1c" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ color: "#7f1d1d", fontSize: 13, lineHeight: 18 }}>
+              {r.reason}
+              {r.firm ? `\nRecalled by ${r.firm}.` : ""}
+            </Text>
+            {r.allergyHit ? (
+              <View
+                style={{
+                  alignSelf: "flex-start",
+                  backgroundColor: "#dc2626",
+                  borderRadius: 99,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  marginTop: 8,
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 11 }}>
+                  ⚠ Matches {r.profileName || "your"} {r.allergyHit} allergy — do not eat
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ))}
+
         <Text className="text-2xl font-bold text-gray-900 mb-4">
           Recommended Products for You
         </Text>
