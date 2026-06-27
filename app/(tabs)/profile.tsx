@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import { getActiveProfile } from "@/services/familyProfile";
 import { runRecallScan, triggerDemoRecall } from "@/services/recall";
+import { getReadAloudEnabled, setReadAloudEnabled } from "@/services/settings";
 import {
   ActivityIndicator,
   Alert,
@@ -10,6 +11,7 @@ import {
   Modal,
   ScrollView,
   Share,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -131,6 +133,7 @@ const profile = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [activeProfileName, setActiveProfileName] = useState<string>("");
   const [isProfileSelf, setIsProfileSelf] = useState(true);
+  const [readAloud, setReadAloud] = useState(false);
 
   // Change-password modal
   const [pwModal, setPwModal] = useState(false);
@@ -144,6 +147,7 @@ const profile = () => {
         setActiveProfileName(p.name);
         setIsProfileSelf(p.isSelf);
       });
+      getReadAloudEnabled().then(setReadAloud);
 
       const fetchD = async () => {
         const { data: u } = await supabase.auth.getUser();
@@ -205,6 +209,11 @@ const profile = () => {
       "Recall simulated",
       "A notification was sent and the alert is now on your Home screen."
     );
+  };
+
+  const toggleReadAloud = async (value: boolean) => {
+    setReadAloud(value);
+    await setReadAloudEnabled(value);
   };
 
   const shareApp = async () => {
@@ -295,6 +304,35 @@ const profile = () => {
           onPress={() => router.push("/edit-health")}
           last
         />
+      </Card>
+
+      {/* Accessibility */}
+      <SectionLabel>Accessibility</SectionLabel>
+      <Card>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+          }}
+        >
+          <Ionicons name="volume-high-outline" size={20} color="#15803d" style={{ width: 28 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, color: "#111827", fontWeight: "500" }}>
+              Read-aloud verdict
+            </Text>
+            <Text style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+              Show a Listen button to hear safety results spoken aloud
+            </Text>
+          </View>
+          <Switch
+            value={readAloud}
+            onValueChange={toggleReadAloud}
+            trackColor={{ false: "#d1d5db", true: "#86efac" }}
+            thumbColor={readAloud ? "#15803d" : "#f4f3f4"}
+          />
+        </View>
       </Card>
 
       {/* Safety alerts */}

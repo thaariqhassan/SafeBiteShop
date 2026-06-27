@@ -13,6 +13,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { askCopilot, ChatMessage } from "@/services/copilot";
 import { getActiveProfile } from "@/services/familyProfile";
 import { speak, stopSpeaking } from "@/services/speech";
+import { getReadAloudEnabled } from "@/services/settings";
 
 const SUGGESTIONS = [
   "What should I avoid eating today?",
@@ -27,10 +28,12 @@ const Copilot = () => {
   const [loading, setLoading] = useState(false);
   const [advisingName, setAdvisingName] = useState("");
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [readAloud, setReadAloud] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     getActiveProfile().then((p) => setAdvisingName(p.name));
+    getReadAloudEnabled().then(setReadAloud);
   }, []);
 
   // Stop narration when leaving the screen.
@@ -190,7 +193,7 @@ const Copilot = () => {
               >
                 {m.content}
               </Text>
-              {m.role === "assistant" ? (
+              {m.role === "assistant" && readAloud ? (
                 <TouchableOpacity
                   onPress={() => toggleSpeak(i, m.content)}
                   accessibilityRole="button"

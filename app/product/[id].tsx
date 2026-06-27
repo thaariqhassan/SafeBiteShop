@@ -16,6 +16,7 @@ import { logNutrition } from "@/services/nutritionLog";
 import { cacheProduct, getCachedProduct, updateCachedSummary } from "@/services/scanCache";
 import { AlternativeProduct, getHealthierAlternatives } from "@/services/alternatives";
 import { speak, stopSpeaking } from "@/services/speech";
+import { getReadAloudEnabled } from "@/services/settings";
 
 export interface ProductData {
   product_name: string;
@@ -33,6 +34,133 @@ export interface ProductData {
   nova_score: number;
   nutrition_grade: string;
 }
+
+// ---- presentational helpers ------------------------------------------------
+
+const Card = ({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: object;
+}) => (
+  <View
+    style={[
+      {
+        backgroundColor: "#ffffff",
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 14,
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        elevation: 2,
+      },
+      style,
+    ]}
+  >
+    {children}
+  </View>
+);
+
+const SectionHeader = ({
+  icon,
+  color = "#15803d",
+  title,
+  right,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  color?: string;
+  title: string;
+  right?: React.ReactNode;
+}) => (
+  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+    <Ionicons name={icon} size={18} color={color} />
+    <Text
+      style={{ fontSize: 15, fontWeight: "700", color: "#111827", marginLeft: 8, flex: 1 }}
+    >
+      {title}
+    </Text>
+    {right}
+  </View>
+);
+
+const Badge = ({ label, bg, color }: { label: string; bg: string; color: string }) => (
+  <View
+    style={{
+      backgroundColor: bg,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      marginRight: 8,
+      marginBottom: 6,
+    }}
+  >
+    <Text style={{ color, fontWeight: "700", fontSize: 12 }}>{label}</Text>
+  </View>
+);
+
+const NUTRI_COLORS: Record<string, string> = {
+  a: "#15803d",
+  b: "#65a30d",
+  c: "#ca8a04",
+  d: "#ea580c",
+  e: "#dc2626",
+};
+
+const NutriScoreBadge = ({ grade }: { grade?: string }) => {
+  const g = (grade || "").toLowerCase();
+  const color = NUTRI_COLORS[g] || "#6b7280";
+  return (
+    <View
+      style={{
+        backgroundColor: color,
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        marginRight: 8,
+        marginBottom: 6,
+      }}
+    >
+      <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>
+        Nutri-Score {grade ? grade.toUpperCase() : "N/A"}
+      </Text>
+    </View>
+  );
+};
+
+const NutrientStat = ({
+  label,
+  value,
+  unit,
+}: {
+  label: string;
+  value: string | number;
+  unit: string;
+}) => (
+  <View style={{ width: "33.33%", paddingVertical: 8 }}>
+    <Text style={{ fontSize: 18, fontWeight: "800", color: "#111827" }}>
+      {value}
+      <Text style={{ fontSize: 11, fontWeight: "600", color: "#9ca3af" }}> {unit}</Text>
+    </Text>
+    <Text style={{ fontSize: 11, color: "#6b7280", marginTop: 1 }}>{label}</Text>
+  </View>
+);
+
+const DetailRow = ({ label, value }: { label: string; value: string }) => (
+  <View style={{ marginBottom: 10 }}>
+    <Text style={{ fontSize: 12, fontWeight: "700", color: "#6b7280", marginBottom: 2 }}>
+      {label}
+    </Text>
+    <Text style={{ fontSize: 13, color: "#374151", lineHeight: 18 }}>{value}</Text>
+  </View>
+);
+
+const cleanTags = (tags?: string[]): string =>
+  tags && tags.length ? tags.map((t) => t.replace("en:", "")).join(", ") : "";
+
+// ---- screen ----------------------------------------------------------------
 
 const ProductSummary = () => {
   const { id } = useLocalSearchParams();
@@ -52,12 +180,16 @@ const ProductSummary = () => {
   const [alternatives, setAlternatives] = useState<AlternativeProduct[]>([]);
   const [altLoading, setAltLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [readAloud, setReadAloud] = useState(false);
 
   const navigation = useNavigation();
   const router = useRouter();
 
-  // Stop any narration when leaving the screen.
-  useEffect(() => () => stopSpeaking(), []);
+  useEffect(() => {
+    getReadAloudEnabled().then(setReadAloud);
+    // Stop any narration when leaving the screen.
+    return () => stopSpeaking();
+  }, []);
 
   // Read the whole safety verdict aloud — product, allergens, medication
   // interactions, then the AI summary — for low-vision / hands-busy users.
@@ -72,9 +204,7 @@ const ProductSummary = () => {
     if (productData?.allergens) parts.push(`Allergens: ${productData.allergens}.`);
     if (medicationWarnings.length > 0) {
       parts.push("Warning: medication interaction detected.");
-      medicationWarnings.forEach((w) =>
-        parts.push(`${w.medication}. ${w.reason}.`)
-      );
+      medicationWarnings.forEach((w) => parts.push(`${w.medication}. ${w.reason}.`));
     }
     if (summaryData) parts.push(summaryData);
     speak(parts.join(". "), {
@@ -82,6 +212,7 @@ const ProductSummary = () => {
       onDone: () => setSpeaking(false),
     });
   };
+
   useEffect(() => {
     const fetchData = async () => {
       const applyProduct = (p: any) => {
@@ -198,407 +329,379 @@ const ProductSummary = () => {
     };
   }, [productData, fromCache]);
 
-  return (
-    <>
-      {loading ? (
-        <View className="w-screen h-screen flex items-center justify-center">
-          <ActivityIndicator size="large" color="#0000ff" />
-        </View>
-      ) : notFound ? (
-        <View className="w-screen h-screen flex items-center justify-center px-8">
-          <Text className="text-lg font-semibold text-gray-800">Product not found</Text>
-          <Text className="text-gray-500 text-center mt-2 mb-5">
-            This barcode isn't in our database — but you can read its label instead.
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#f3f4f6",
+        }}
+      >
+        <ActivityIndicator size="large" color="#15803d" />
+        <Text style={{ color: "#6b7280", marginTop: 12 }}>Loading product…</Text>
+      </View>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 32,
+          backgroundColor: "#f3f4f6",
+        }}
+      >
+        <Ionicons name="search-outline" size={48} color="#9ca3af" />
+        <Text style={{ fontSize: 18, fontWeight: "700", color: "#1f2937", marginTop: 12 }}>
+          Product not found
+        </Text>
+        <Text style={{ color: "#6b7280", textAlign: "center", marginTop: 6, marginBottom: 20 }}>
+          This barcode isn't in our database — but you can read its label instead.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.replace("/label-scan")}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: "#15803d",
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            borderRadius: 30,
+          }}
+        >
+          <Ionicons name="document-text-outline" size={18} color="#fff" />
+          <Text style={{ color: "#fff", fontWeight: "700", marginLeft: 8 }}>
+            Snap the label instead
           </Text>
-          <TouchableOpacity
-            onPress={() => router.replace("/label-scan")}
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const nutr = productData.nutriments || {};
+  const additives = cleanTags(productData.additives_tags);
+  const labels = cleanTags(productData.labels_tags);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+      >
+        {/* Hero card */}
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <View
             style={{
-              flexDirection: "row",
+              height: 220,
+              backgroundColor: "#f9fafb",
               alignItems: "center",
-              backgroundColor: "#15803d",
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-              borderRadius: 30,
+              justifyContent: "center",
             }}
           >
-            <Ionicons name="document-text-outline" size={18} color="#fff" />
-            <Text style={{ color: "#fff", fontWeight: "700", marginLeft: 8 }}>
-              Snap the label instead
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View className="w-screen h-screen p-4 bg-white ">
-          <ScrollView
-            className="flex-1 text-xl px-1 space-y-5"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 80 }}
-          >
-            <View
-              style={{ width: 360, height: 260 }}
-              className="mb-4 relative items-center justify-center"
-            >
-              {imgLoading && (
-                <ActivityIndicator
-                  size="small"
-                  color="#555"
-                  style={{
-                    position: "absolute",
-                    zIndex: 1,
-                    alignSelf: "center",
-                    top: "45%",
-                  }}
-                />
-              )}
-              <Image
-                source={{
-                  uri:
-                    imgUri ||
-                    "https://placehold.co/360x260?text=No+Image&font=roboto",
-                }}
-                style={{ width: 370, height: 260, backgroundColor: "#f0f0f0" }}
-                resizeMode="contain"
-                onLoadStart={() => setImgLoading(true)}
-                onLoadEnd={() => setImgLoading(false)}
-                onError={() => {
-                  setImgLoading(false);
-                }}
-                className="rounded-lg border border-gray-300 shadow-md ml-2"
-                alt="Product Image"
+            {imgLoading && (
+              <ActivityIndicator
+                size="small"
+                color="#15803d"
+                style={{ position: "absolute", zIndex: 1 }}
               />
+            )}
+            <Image
+              source={{
+                uri: imgUri || "https://placehold.co/360x260?text=No+Image&font=roboto",
+              }}
+              style={{ width: "100%", height: 220 }}
+              resizeMode="contain"
+              onLoadStart={() => setImgLoading(true)}
+              onLoadEnd={() => setImgLoading(false)}
+              onError={() => setImgLoading(false)}
+            />
+          </View>
+          <View style={{ padding: 16 }}>
+            <Text style={{ fontSize: 22, fontWeight: "800", color: "#111827" }}>
+              {productData.product_name || "Unknown Product"}
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 12 }}>
+              <NutriScoreBadge grade={productData.nutriscore_grade} />
+              <Badge
+                label={`NOVA ${productData.nova_group || "?"}`}
+                bg="#ede9fe"
+                color="#6d28d9"
+              />
+              {productData.nutrition_grades ? (
+                <Badge
+                  label={`Grade ${String(productData.nutrition_grades).toUpperCase()}`}
+                  bg="#dbeafe"
+                  color="#1d4ed8"
+                />
+              ) : null}
             </View>
-            <View className="flex flex-row mb-1">
-              <Text className="text-2xl font-bold ">
-                {productData.product_name || "Unknown Product"}
-              </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 4 }}>
+              {fromCache ? (
+                <Badge label="📦 Offline cached" bg="#fef9c3" color="#92400e" />
+              ) : null}
+              {profileName ? (
+                <Badge label={`For ${profileName}`} bg="#dcfce7" color="#166534" />
+              ) : null}
             </View>
-            {fromCache && (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "#fefce8",
-                  borderRadius: 6,
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
-                  marginBottom: 6,
-                  alignSelf: "flex-start",
-                }}
-              >
-                <Text style={{ fontSize: 12, color: "#92400e" }}>
-                  📦 Viewing cached version · No internet connection
+          </View>
+        </Card>
+
+        {/* Medication interaction — surfaced near the top for safety */}
+        {medicationWarnings.length > 0 && (
+          <Card
+            style={{
+              backgroundColor: "#fff1f2",
+              borderLeftWidth: 5,
+              borderLeftColor: "#dc2626",
+            }}
+          >
+            <SectionHeader
+              icon="medkit"
+              color="#dc2626"
+              title="Medication interaction detected"
+            />
+            {medicationWarnings.map((w, i) => (
+              <View key={i} style={{ marginBottom: 10 }}>
+                <Text style={{ color: "#dc2626", fontWeight: "700", fontSize: 14 }}>
+                  {w.medication}
+                </Text>
+                <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
+                  Contains: {w.triggeredBy.join(", ")}
+                </Text>
+                <Text style={{ color: "#374151", fontSize: 13, marginTop: 2, lineHeight: 18 }}>
+                  {w.reason}
                 </Text>
               </View>
-            )}
-            {/* Nutrition Grade + Nova */}
-            <Text className="text-md text-gray-700  mb-2">
-              🧪 Nutrition Grade:{" "}
-              <Text className="font-semibold uppercase">
-                {productData.nutriscore_grade || "N/A"}
-              </Text>
+            ))}
+            <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 2 }}>
+              Consult your doctor or pharmacist before consuming this product.
             </Text>
-            <Text className="text-md text-gray-700 mb-2">
-              🔬 Processing:{" "}
-              <Text className="font-semibold">
-                Nova {productData.nova_group || "N/A"}
-              </Text>
-            </Text>
-            {/* Allergens */}
-            <Text className="text-md font-semibold text-red-600 mb-3">
-              ⚠️ Allergens:
-              <Text className="text-md text-gray-700 ">
-                {productData.allergens || "None listed"}
-              </Text>
-            </Text>
-            {/* Additives */}
-            <Text className="text-md font-semibold text-yellow-700 mb-3">
-              🧬 Additives:
-              <Text className="text-md text-gray-700 ">
-                {productData.additives_tags?.length
-                  ? productData.additives_tags
-                      .map((tag: any) => tag.replace("en:", ""))
-                      .join(", ")
-                  : "None listed"}
-              </Text>
-            </Text>
-            {/* Ingredients */}
-            <Text className="text-md font-semibold text-green-700 mb-1">
-              🥗 Ingredients:
-            </Text>
-            <Text className="text-md text-gray-700 mb-3">
-              {productData.ingredients_text || "Not available"}
-            </Text>
-            {/* Nutritional Info */}
-            <Text className="text-md font-semibold text-purple-700 mb-1">
-              📊 Nutritional Info (per 100g):
-            </Text>
-            <View className="pl-2">
-              <Text className="text-gray-700">
-                Calories:{" "}
-                {productData.nutriments?.["energy-kcal_100g"] || "N/A"} kcal
-              </Text>
-              <Text className="text-gray-700">
-                Sugar: {productData.nutriments?.["sugars_100g"] || "N/A"} g
-              </Text>
-              <Text className="text-gray-700">
-                Fat: {productData.nutriments?.["fat_100g"] || "N/A"} g
-              </Text>
-              <Text className="text-gray-700">
-                Salt: {productData.nutriments?.["salt_100g"] || "N/A"} g
-              </Text>
-              <Text className="text-gray-700">
-                Protein: {productData.nutriments?.["proteins_100g"] || "N/A"} g
-              </Text>
-            </View>
-            {/* Labels */}
-            <Text className="text-md font-semibold text-blue-700 mt-4 mb-1">
-              🏷️ Labels:
-            </Text>
-            <Text className="text-gray-700">
-              {productData.labels_tags?.length
-                ? productData.labels_tags
-                    .map((tag: any) => tag.replace("en:", ""))
-                    .join(", ")
-                : "None"}
-            </Text>
-            {/* Expiry Date */}
-            <Text className="text-md font-semibold text-orange-600 mt-4 mb-1">
-              ⏳ Expiry Date:
-            </Text>
-            <Text className="text-gray-700">
-              {productData.expiration_date || "Not available"}
-            </Text>
-            {medicationWarnings.length > 0 && (
-              <View
-                style={{
-                  backgroundColor: "#fff1f2",
-                  borderLeftWidth: 4,
-                  borderLeftColor: "#dc2626",
-                  borderRadius: 8,
-                  padding: 12,
-                  marginTop: 16,
-                }}
-              >
-                <Text
-                  style={{ color: "#991b1b", fontWeight: "bold", fontSize: 15, marginBottom: 8 }}
+          </Card>
+        )}
+
+        {/* AI Safety Summary */}
+        <Card>
+          <SectionHeader
+            icon="sparkles"
+            title="AI Safety Summary"
+            right={
+              readAloud && !summaryLoading && (summaryData || medicationWarnings.length > 0) ? (
+                <TouchableOpacity
+                  onPress={toggleSpeak}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    speaking ? "Stop reading the verdict aloud" : "Read the verdict aloud"
+                  }
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: speaking ? "#fee2e2" : "#dcfce7",
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 20,
+                  }}
                 >
-                  💊 Medication Interaction Detected
-                </Text>
-                {medicationWarnings.map((w, i) => (
-                  <View key={i} style={{ marginBottom: 10 }}>
-                    <Text style={{ color: "#dc2626", fontWeight: "600", fontSize: 13 }}>
-                      {w.medication}
-                    </Text>
-                    <Text style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
-                      Contains: {w.triggeredBy.join(", ")}
-                    </Text>
-                    <Text style={{ color: "#374151", fontSize: 12, marginTop: 2 }}>
-                      {w.reason}
-                    </Text>
-                  </View>
-                ))}
-                <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 4 }}>
-                  Consult your doctor or pharmacist before consuming this product.
-                </Text>
-              </View>
-            )}
-            {profileName ? (
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  backgroundColor: "#f0fdf4",
-                  borderRadius: 8,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  marginTop: 12,
-                  alignSelf: "flex-start",
-                }}
-              >
-                <Text style={{ fontSize: 12, color: "#166534" }}>
-                  👤 Scanning for: <Text style={{ fontWeight: "700" }}>{profileName}</Text>
-                </Text>
-              </View>
-            ) : null}
-            <View className="mt-5">
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 8,
-                }}
-              >
-                <Text className="text-lg font-semibold text-gray-800">
-                  AI Summary
-                </Text>
-                {!summaryLoading && (summaryData || medicationWarnings.length > 0) ? (
-                  <TouchableOpacity
-                    onPress={toggleSpeak}
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      speaking ? "Stop reading the verdict aloud" : "Read the verdict aloud"
-                    }
+                  <Ionicons
+                    name={speaking ? "stop" : "volume-high"}
+                    size={16}
+                    color={speaking ? "#dc2626" : "#15803d"}
+                  />
+                  <Text
                     style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      backgroundColor: speaking ? "#fee2e2" : "#dcfce7",
-                      paddingHorizontal: 12,
-                      paddingVertical: 7,
-                      borderRadius: 20,
+                      marginLeft: 6,
+                      fontSize: 13,
+                      fontWeight: "700",
+                      color: speaking ? "#dc2626" : "#15803d",
                     }}
                   >
-                    <Ionicons
-                      name={speaking ? "stop" : "volume-high"}
-                      size={16}
-                      color={speaking ? "#dc2626" : "#15803d"}
+                    {speaking ? "Stop" : "Listen"}
+                  </Text>
+                </TouchableOpacity>
+              ) : undefined
+            }
+          />
+          {summaryLoading ? (
+            <ActivityIndicator size="small" color="#15803d" style={{ alignSelf: "flex-start" }} />
+          ) : (
+            <Text style={{ color: "#374151", fontSize: 14, lineHeight: 21 }}>
+              {summaryData || "No summary available for this product."}
+            </Text>
+          )}
+        </Card>
+
+        {/* Allergens */}
+        <Card>
+          <SectionHeader icon="warning" color="#dc2626" title="Allergens" />
+          <Text style={{ color: "#374151", fontSize: 14, lineHeight: 20 }}>
+            {productData.allergens || "None listed"}
+          </Text>
+        </Card>
+
+        {/* Nutrition */}
+        <Card>
+          <SectionHeader icon="nutrition" color="#7c3aed" title="Nutrition (per 100g)" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            <NutrientStat label="Calories" value={nutr["energy-kcal_100g"] ?? "—"} unit="kcal" />
+            <NutrientStat label="Sugar" value={nutr["sugars_100g"] ?? "—"} unit="g" />
+            <NutrientStat label="Fat" value={nutr["fat_100g"] ?? "—"} unit="g" />
+            <NutrientStat label="Salt" value={nutr["salt_100g"] ?? "—"} unit="g" />
+            <NutrientStat label="Protein" value={nutr["proteins_100g"] ?? "—"} unit="g" />
+          </View>
+        </Card>
+
+        {/* Ingredients */}
+        <Card>
+          <SectionHeader icon="leaf" title="Ingredients" />
+          <Text style={{ color: "#374151", fontSize: 14, lineHeight: 20 }}>
+            {productData.ingredients_text || "Not available"}
+          </Text>
+        </Card>
+
+        {/* More details */}
+        <Card>
+          <SectionHeader icon="information-circle" color="#0891b2" title="More details" />
+          <DetailRow label="Additives" value={additives || "None listed"} />
+          <DetailRow label="Labels" value={labels || "None"} />
+          <DetailRow label="Expiry date" value={productData.expiration_date || "Not available"} />
+        </Card>
+
+        {/* Healthier picks */}
+        {(altLoading || alternatives.length > 0) && (
+          <Card>
+            <SectionHeader icon="trending-up" title="Healthier picks for you" />
+            <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 10, marginTop: -4 }}>
+              Safer for your profile and better rated than this product.
+            </Text>
+            {altLoading ? (
+              <ActivityIndicator size="small" color="#15803d" />
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {alternatives.map((alt) => (
+                  <TouchableOpacity
+                    key={alt.id}
+                    onPress={() =>
+                      router.push({ pathname: "/product/[id]", params: { id: alt.id } })
+                    }
+                    style={{ width: 130, marginRight: 12 }}
+                  >
+                    <Image
+                      source={{
+                        uri:
+                          alt.image ||
+                          "https://placehold.co/130x110?text=No+Image&font=roboto",
+                      }}
+                      style={{
+                        width: 130,
+                        height: 110,
+                        borderRadius: 10,
+                        backgroundColor: "#f3f4f6",
+                      }}
+                      resizeMode="contain"
                     />
                     <Text
+                      numberOfLines={2}
+                      style={{ fontSize: 12, color: "#111827", marginTop: 5, fontWeight: "600" }}
+                    >
+                      {alt.name}
+                    </Text>
+                    <View
                       style={{
-                        marginLeft: 6,
-                        fontSize: 13,
-                        fontWeight: "700",
-                        color: speaking ? "#dc2626" : "#15803d",
+                        alignSelf: "flex-start",
+                        backgroundColor: "#dcfce7",
+                        borderRadius: 6,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                        marginTop: 3,
                       }}
                     >
-                      {speaking ? "Stop" : "Listen"}
-                    </Text>
+                      <Text style={{ fontSize: 11, color: "#166534", fontWeight: "700" }}>
+                        Nutri-Score {alt.nutriscore_grade.toUpperCase()}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
-                ) : null}
-              </View>
-              {summaryLoading ? (
-                <View>
-                  <ActivityIndicator size="large" color="#15803d" />
-                </View>
-              ) : (
-                <Text className="text-gray-700">
-                  {summaryData || "No summary available for this product."}
-                </Text>
-              )}
-            </View>
-
-            {(altLoading || alternatives.length > 0) && (
-              <View style={{ marginTop: 18 }}>
-                <Text className="text-lg font-semibold text-gray-800 mb-1">
-                  🌱 Healthier picks for you
-                </Text>
-                <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 8 }}>
-                  Safer for your profile and better rated than this product.
-                </Text>
-                {altLoading ? (
-                  <ActivityIndicator size="small" color="#15803d" />
-                ) : (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {alternatives.map((alt) => (
-                      <TouchableOpacity
-                        key={alt.id}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/product/[id]",
-                            params: { id: alt.id },
-                          })
-                        }
-                        style={{ width: 130, marginRight: 12 }}
-                      >
-                        <Image
-                          source={{
-                            uri:
-                              alt.image ||
-                              "https://placehold.co/130x110?text=No+Image&font=roboto",
-                          }}
-                          style={{
-                            width: 130,
-                            height: 110,
-                            borderRadius: 8,
-                            backgroundColor: "#f0f0f0",
-                          }}
-                          resizeMode="contain"
-                        />
-                        <Text
-                          numberOfLines={2}
-                          style={{ fontSize: 12, color: "#111827", marginTop: 4, fontWeight: "600" }}
-                        >
-                          {alt.name}
-                        </Text>
-                        <View
-                          style={{
-                            alignSelf: "flex-start",
-                            backgroundColor: "#dcfce7",
-                            borderRadius: 6,
-                            paddingHorizontal: 6,
-                            paddingVertical: 1,
-                            marginTop: 2,
-                          }}
-                        >
-                          <Text style={{ fontSize: 11, color: "#166534", fontWeight: "700" }}>
-                            Nutri-Score {alt.nutriscore_grade.toUpperCase()}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
+                ))}
+              </ScrollView>
             )}
+          </Card>
+        )}
 
-            <TouchableOpacity
-              style={{
-                backgroundColor: logged ? "#d1fae5" : "#0284c7",
-                padding: 12,
-                borderRadius: 10,
-                marginTop: 12,
-                opacity: logLoading ? 0.6 : 1,
-              }}
-              disabled={logged || logLoading}
-              onPress={async () => {
-                setLogLoading(true);
-                const { error } = await logNutrition(
-                  productData?.product_name || "Unknown Product",
-                  String(id),
-                  {
-                    calories: parseFloat(productData?.nutriments?.["energy-kcal_100g"]) || 0,
-                    sugar: parseFloat(productData?.nutriments?.["sugars_100g"]) || 0,
-                    fat: parseFloat(productData?.nutriments?.["fat_100g"]) || 0,
-                    salt: parseFloat(productData?.nutriments?.["salt_100g"]) || 0,
-                    protein: parseFloat(productData?.nutriments?.["proteins_100g"]) || 0,
-                  }
-                );
-                setLogLoading(false);
-                if (!error) {
-                  setLogged(true);
-                } else {
-                  Alert.alert(
-                    "Couldn't add to diary",
-                    typeof error === "string"
-                      ? error
-                      : (error as any)?.message ?? "Please try again."
-                  );
-                }
-              }}
-            >
-              <Text
-                style={{
-                  color: logged ? "#15803d" : "#ffffff",
-                  textAlign: "center",
-                  fontWeight: "600",
-                  fontSize: 16,
-                }}
-              >
-                {logLoading ? "Logging…" : logged ? "✓ Added to Food Diary" : "Add to Food Diary"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className=" bg-green-600 p-3 rounded-lg mb-20 mt-4"
-              onPress={() => navigation.goBack()}
-            >
-              <Text className="text-white text-center text-lg font-semibold ">
-                Go Back
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      )}
-    </>
+        {/* Add to diary */}
+        <TouchableOpacity
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: logged ? "#dcfce7" : "#0284c7",
+            paddingVertical: 14,
+            borderRadius: 14,
+            marginTop: 2,
+            opacity: logLoading ? 0.6 : 1,
+          }}
+          disabled={logged || logLoading}
+          onPress={async () => {
+            setLogLoading(true);
+            const { error } = await logNutrition(
+              productData?.product_name || "Unknown Product",
+              String(id),
+              {
+                calories: parseFloat(productData?.nutriments?.["energy-kcal_100g"]) || 0,
+                sugar: parseFloat(productData?.nutriments?.["sugars_100g"]) || 0,
+                fat: parseFloat(productData?.nutriments?.["fat_100g"]) || 0,
+                salt: parseFloat(productData?.nutriments?.["salt_100g"]) || 0,
+                protein: parseFloat(productData?.nutriments?.["proteins_100g"]) || 0,
+              }
+            );
+            setLogLoading(false);
+            if (!error) {
+              setLogged(true);
+            } else {
+              Alert.alert(
+                "Couldn't add to diary",
+                typeof error === "string"
+                  ? error
+                  : (error as any)?.message ?? "Please try again."
+              );
+            }
+          }}
+        >
+          <Ionicons
+            name={logged ? "checkmark-circle" : "add-circle-outline"}
+            size={20}
+            color={logged ? "#15803d" : "#ffffff"}
+          />
+          <Text
+            style={{
+              color: logged ? "#15803d" : "#ffffff",
+              fontWeight: "700",
+              fontSize: 15,
+              marginLeft: 8,
+            }}
+          >
+            {logLoading ? "Logging…" : logged ? "Added to Food Diary" : "Add to Food Diary"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Back */}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#15803d",
+            paddingVertical: 14,
+            borderRadius: 14,
+            marginTop: 10,
+          }}
+        >
+          <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15 }}>Go Back</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 };
 

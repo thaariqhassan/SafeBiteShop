@@ -54,7 +54,7 @@ A conversational assistant (powered by **Google Gemini**) that you can ask anyth
 
 ### ♿ Accessibility
 
-- 🔊 **Read-aloud verdict** — a **Listen** button on every product reads the whole safety verdict aloud (name → allergens → medication interactions → AI summary), so low-vision, elderly, or hands-busy users can *hear* whether a food is safe. The co-pilot's answers can be read aloud too.
+- 🔊 **Read-aloud verdict** — enable it from **Profile → Accessibility**, and a **Listen** button appears on every product to read the whole safety verdict aloud (name → allergens → medication interactions → AI summary), so low-vision, elderly, or hands-busy users can *hear* whether a food is safe. The co-pilot's answers can be read aloud too.
 
 ### 🍳 Eat better
 
