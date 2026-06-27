@@ -333,7 +333,8 @@ const index = () => {
         style={{
           position: "absolute",
           right: 18,
-          bottom: 28,
+          bottom: 96,
+          zIndex: 20,
           flexDirection: "row",
           alignItems: "center",
           backgroundColor: "#15803d",
@@ -344,7 +345,7 @@ const index = () => {
           shadowOpacity: 0.25,
           shadowRadius: 6,
           shadowOffset: { width: 0, height: 3 },
-          elevation: 6,
+          elevation: 10,
         }}
       >
         <Ionicons name="sparkles" size={18} color="#ffffff" />

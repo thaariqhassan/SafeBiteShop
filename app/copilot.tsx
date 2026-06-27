@@ -68,15 +68,19 @@ const Copilot = () => {
 
     const { reply, error } = await askCopilot(next);
     setLoading(false);
-    setMessages([
-      ...next,
-      {
-        role: "assistant",
-        content:
-          reply ||
-          `Sorry, I couldn't answer that${error ? ` (${error})` : ""}. Please try again.`,
-      },
-    ]);
+    const answer =
+      reply ||
+      `Sorry, I couldn't answer that${error ? ` (${error})` : ""}. Please try again.`;
+    setMessages([...next, { role: "assistant", content: answer }]);
+
+    // Auto-narrate the answer when read-aloud is enabled.
+    if (readAloud && reply) {
+      const idx = next.length; // position of the assistant message
+      speak(answer, {
+        onStart: () => setSpeakingIdx(idx),
+        onDone: () => setSpeakingIdx(null),
+      });
+    }
   };
 
   const isEmpty = messages.length === 0;

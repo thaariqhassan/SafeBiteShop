@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import handleSummary, { SummaryResult } from "@/services/summary";
@@ -191,14 +191,11 @@ const ProductSummary = () => {
     return () => stopSpeaking();
   }, []);
 
-  // Read the whole safety verdict aloud — product, allergens, medication
+  const autoSpoken = useRef(false);
+
+  // Compose the spoken safety verdict — product, allergens, medication
   // interactions, then the AI summary — for low-vision / hands-busy users.
-  const toggleSpeak = () => {
-    if (speaking) {
-      stopSpeaking();
-      setSpeaking(false);
-      return;
-    }
+  const buildVerdict = (): string => {
     const parts: string[] = [];
     parts.push(productData?.product_name || "Unknown product");
     if (productData?.allergens) parts.push(`Allergens: ${productData.allergens}.`);
@@ -207,11 +204,35 @@ const ProductSummary = () => {
       medicationWarnings.forEach((w) => parts.push(`${w.medication}. ${w.reason}.`));
     }
     if (summaryData) parts.push(summaryData);
-    speak(parts.join(". "), {
+    return parts.join(". ");
+  };
+
+  const startVerdict = () => {
+    speak(buildVerdict(), {
       onStart: () => setSpeaking(true),
       onDone: () => setSpeaking(false),
     });
   };
+
+  const toggleSpeak = () => {
+    if (speaking) {
+      stopSpeaking();
+      setSpeaking(false);
+      return;
+    }
+    startVerdict();
+  };
+
+  // When read-aloud is enabled, automatically narrate the verdict once the AI
+  // summary is ready (only once per product view).
+  useEffect(() => {
+    if (!readAloud || summaryLoading || autoSpoken.current) return;
+    if (summaryData || medicationWarnings.length > 0) {
+      autoSpoken.current = true;
+      startVerdict();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readAloud, summaryLoading, summaryData, medicationWarnings]);
 
   useEffect(() => {
     const fetchData = async () => {
