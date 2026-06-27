@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useLocalSearchParams } from "expo-router";
 import { askCopilot, ChatMessage } from "@/services/copilot";
 import { getActiveProfile } from "@/services/familyProfile";
 import { speak, stopSpeaking } from "@/services/speech";
@@ -31,10 +32,22 @@ const Copilot = () => {
   const [readAloud, setReadAloud] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
+  const params = useLocalSearchParams<{ seed?: string; productContext?: string }>();
+  // Kept in refs so the async send() closure always sees the latest value.
+  const productCtxRef = useRef<string | undefined>(
+    typeof params.productContext === "string" ? params.productContext : undefined
+  );
+  const readAloudRef = useRef(false);
+  const autoSent = useRef(false);
+
   useEffect(() => {
     getActiveProfile().then((p) => setAdvisingName(p.name));
     getReadAloudEnabled().then(setReadAloud);
   }, []);
+
+  useEffect(() => {
+    readAloudRef.current = readAloud;
+  }, [readAloud]);
 
   // Stop narration when leaving the screen.
   useEffect(() => () => stopSpeaking(), []);
@@ -66,7 +79,7 @@ const Copilot = () => {
     setInput("");
     setLoading(true);
 
-    const { reply, error } = await askCopilot(next);
+    const { reply, error } = await askCopilot(next, productCtxRef.current);
     setLoading(false);
     const answer =
       reply ||
@@ -74,7 +87,7 @@ const Copilot = () => {
     setMessages([...next, { role: "assistant", content: answer }]);
 
     // Auto-narrate the answer when read-aloud is enabled.
-    if (readAloud && reply) {
+    if (readAloudRef.current && reply) {
       const idx = next.length; // position of the assistant message
       speak(answer, {
         onStart: () => setSpeakingIdx(idx),
@@ -82,6 +95,18 @@ const Copilot = () => {
       });
     }
   };
+
+  // When opened from a product ("Ask Sage about this"), auto-send the seed
+  // question once so Sage answers about that product immediately.
+  useEffect(() => {
+    if (autoSent.current) return;
+    const seed = typeof params.seed === "string" ? params.seed.trim() : "";
+    if (seed) {
+      autoSent.current = true;
+      send(seed);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isEmpty = messages.length === 0;
 

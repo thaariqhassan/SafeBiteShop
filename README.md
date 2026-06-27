@@ -50,7 +50,7 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 
 ### 🤖 Sage — AI Health Co-pilot
 
-**Sage** is a conversational assistant (powered by **Google Gemini**) you can ask anything — *"Can I eat this with my warfarin?"*, *"What should I avoid today?"*, *"Suggest a safe snack."* It's grounded in your **active health profile** (allergies, conditions, medications, diet) **and your recently scanned products**, so every answer is personal — not generic. Reachable from the **Ask Sage** button on Home.
+**Sage** is a conversational assistant (powered by **Google Gemini**) you can ask anything — *"Can I eat this with my warfarin?"*, *"What should I avoid today?"*, *"Suggest a safe snack."* It's grounded in your **active health profile** (allergies, conditions, medications, diet) **and your recently scanned products**, so every answer is personal — not generic. Reachable from the **Ask Sage** button on Home — or tap **Ask Sage about this** on any product to start a chat focused on that exact item.
 
 ### ♿ Accessibility
 

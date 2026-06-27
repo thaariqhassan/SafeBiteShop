@@ -234,6 +234,30 @@ const ProductSummary = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readAloud, summaryLoading, summaryData, medicationWarnings]);
 
+  // Open Sage focused on this specific product.
+  const askSageAboutThis = () => {
+    stopSpeaking();
+    const bits: string[] = [`Product: ${productData?.product_name || "Unknown"}.`];
+    if (productData?.allergens) bits.push(`Allergens listed: ${productData.allergens}.`);
+    if (productData?.ingredients_text)
+      bits.push(`Ingredients: ${String(productData.ingredients_text).slice(0, 300)}.`);
+    if (productData?.nutriscore_grade)
+      bits.push(`Nutri-Score: ${String(productData.nutriscore_grade).toUpperCase()}.`);
+    if (medicationWarnings.length > 0)
+      bits.push(
+        `Flagged medication interactions: ${medicationWarnings
+          .map((w) => w.medication)
+          .join(", ")}.`
+      );
+    router.push({
+      pathname: "/copilot",
+      params: {
+        seed: "Is this product safe for me?",
+        productContext: bits.join(" "),
+      },
+    });
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       const applyProduct = (p: any) => {
@@ -554,6 +578,26 @@ const ProductSummary = () => {
             </Text>
           )}
         </Card>
+
+        {/* Ask Sage about this product */}
+        <TouchableOpacity
+          onPress={askSageAboutThis}
+          activeOpacity={0.85}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#15803d",
+            paddingVertical: 13,
+            borderRadius: 14,
+            marginBottom: 14,
+          }}
+        >
+          <Ionicons name="sparkles" size={18} color="#ffffff" />
+          <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15, marginLeft: 8 }}>
+            Ask Sage about this
+          </Text>
+        </TouchableOpacity>
 
         {/* Allergens */}
         <Card>

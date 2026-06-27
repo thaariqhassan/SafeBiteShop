@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
   try {
-    const { messages, userProfile, recentScans } = req.body;
+    const { messages, userProfile, recentScans, productContext } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "Missing chat messages" });
@@ -14,7 +14,8 @@ router.post("/", async (req, res) => {
     const reply = await consultCopilot(
       messages,
       userProfile || {},
-      recentScans || []
+      recentScans || [],
+      typeof productContext === "string" ? productContext : ""
     );
     res.json({ reply });
   } catch (error) {

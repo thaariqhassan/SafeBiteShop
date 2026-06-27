@@ -9,9 +9,11 @@ export interface ChatMessage {
 }
 
 // Sends the running conversation plus the active profile and a digest of
-// recently scanned products to the Gemini-backed co-pilot endpoint.
+// recently scanned products to the Gemini-backed co-pilot endpoint. An optional
+// productContext focuses Sage on a specific product the user opened.
 export const askCopilot = async (
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  productContext?: string
 ): Promise<{ reply: string; error?: string }> => {
   try {
     const profile = await getActiveProfile();
@@ -39,6 +41,7 @@ export const askCopilot = async (
           dietary: profile.dietary_restrictions,
         },
         recentScans,
+        productContext: productContext || "",
       }),
     });
 

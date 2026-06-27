@@ -10,7 +10,7 @@ const list = (arr) =>
     ? arr.filter((x) => x && x !== "None").join(", ") || "none"
     : "none";
 
-const buildSystemPrompt = (userProfile = {}, recentScans = []) => {
+const buildSystemPrompt = (userProfile = {}, recentScans = [], productContext = "") => {
   const scans =
     Array.isArray(recentScans) && recentScans.length
       ? recentScans
@@ -18,6 +18,10 @@ const buildSystemPrompt = (userProfile = {}, recentScans = []) => {
           .map((s) => `- ${s.name}${s.note ? ` — ${s.note}` : ""}`)
           .join("\n")
       : "none yet";
+
+  const focus = productContext
+    ? `\n\nPRODUCT THE USER IS CURRENTLY ASKING ABOUT (focus your answers on this unless they change topic):\n${productContext}`
+    : "";
 
   return `You are "Sage", the warm, practical AI health assistant inside the SafeBite food-safety app. If asked your name, you are Sage. You help ${userProfile.name || "the user"} decide what is safe to eat for THEIR body.
 
@@ -28,7 +32,7 @@ USER HEALTH PROFILE:
 - Dietary restrictions: ${list(userProfile.dietary)}
 
 RECENTLY SCANNED PRODUCTS:
-${scans}
+${scans}${focus}
 
 HOW TO ANSWER:
 - Always reason about THIS user's specific allergies, conditions, and medications. Watch for food–drug interactions (e.g. warfarin + vitamin K / leafy greens, statins + grapefruit, MAOIs + aged cheese).
@@ -41,7 +45,7 @@ HOW TO ANSWER:
 
 // Calls the Gemini REST API with the running chat history and returns the
 // assistant's reply text.
-const consultCopilot = async (messages, userProfile, recentScans) => {
+const consultCopilot = async (messages, userProfile, recentScans, productContext) => {
   if (!GEMINI_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
   const contents = (messages || [])
@@ -53,7 +57,7 @@ const consultCopilot = async (messages, userProfile, recentScans) => {
 
   const body = {
     systemInstruction: {
-      parts: [{ text: buildSystemPrompt(userProfile, recentScans) }],
+      parts: [{ text: buildSystemPrompt(userProfile, recentScans, productContext) }],
     },
     contents,
     generationConfig: { temperature: 0.4, maxOutputTokens: 800 },
