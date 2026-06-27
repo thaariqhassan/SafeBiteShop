@@ -350,7 +350,7 @@ const index = () => {
       >
         <Ionicons name="sparkles" size={18} color="#ffffff" />
         <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 14, marginLeft: 7 }}>
-          Ask Co-pilot
+          Ask Sage
         </Text>
       </TouchableOpacity>
     </>

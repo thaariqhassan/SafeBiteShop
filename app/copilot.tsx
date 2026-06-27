@@ -131,7 +131,7 @@ const Copilot = () => {
               <Ionicons name="chatbubbles" size={30} color="#15803d" />
             </View>
             <Text style={{ fontSize: 18, fontWeight: "800", color: "#111827" }}>
-              SafeBite Co-pilot
+              SafeBite Sage
             </Text>
             <Text
               style={{
@@ -143,8 +143,8 @@ const Copilot = () => {
                 paddingHorizontal: 10,
               }}
             >
-              Ask me anything about what's safe for your allergies, conditions, and
-              medications.
+              Hi, I'm Sage — ask me anything about what's safe for your allergies,
+              conditions, and medications.
             </Text>
 
             <View style={{ marginTop: 22, width: "100%" }}>
@@ -269,7 +269,7 @@ const Copilot = () => {
         <TextInput
           value={input}
           onChangeText={setInput}
-          placeholder="Ask the co-pilot…"
+          placeholder="Ask Sage…"
           placeholderTextColor="#9ca3af"
           multiline
           style={{

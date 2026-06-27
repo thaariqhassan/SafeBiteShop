@@ -127,7 +127,7 @@ export default function RootLayout() {
         <Stack.Screen
           name="copilot"
           options={{
-            headerTitle: "SafeBite Co-pilot",
+            headerTitle: "SafeBite Sage",
             headerStyle: { backgroundColor: "#004d00" },
             headerTintColor: "#ffffff",
             animation: "fade",

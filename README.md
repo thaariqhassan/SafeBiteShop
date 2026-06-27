@@ -48,9 +48,9 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 - 🎯 **Profile-aware severity** — if the recall reason (e.g. *"undeclared peanuts"*) matches the active profile's allergies, the alert is escalated with a **"do not eat"** warning tied to that person.
 - 🛌 **Works in the background** — be warned about food already in your kitchen before you eat it.
 
-### 🤖 AI Health Co-pilot
+### 🤖 Sage — AI Health Co-pilot
 
-A conversational assistant (powered by **Google Gemini**) that you can ask anything — *"Can I eat this with my warfarin?"*, *"What should I avoid today?"*, *"Suggest a safe snack."* It's grounded in your **active health profile** (allergies, conditions, medications, diet) **and your recently scanned products**, so every answer is personal — not generic. Reachable from the **Ask Co-pilot** button on Home.
+**Sage** is a conversational assistant (powered by **Google Gemini**) you can ask anything — *"Can I eat this with my warfarin?"*, *"What should I avoid today?"*, *"Suggest a safe snack."* It's grounded in your **active health profile** (allergies, conditions, medications, diet) **and your recently scanned products**, so every answer is personal — not generic. Reachable from the **Ask Sage** button on Home.
 
 ### ♿ Accessibility
 
@@ -149,7 +149,7 @@ SafeBite/
 │   ├── privacy.tsx              # Privacy policy
 │   ├── label-scan.tsx           # 📸 Snap-the-label (vision)
 │   ├── menu-scan.tsx            # 🍽️ Eat-out menu scanner (vision)
-│   ├── copilot.tsx             # 🤖 AI Health Co-pilot chat (Gemini)
+│   ├── copilot.tsx             # 🤖 Sage — AI Health Co-pilot chat (Gemini)
 │   ├── shop_interface.tsx       # Shopkeeper inventory (CRUD)
 │   ├── (auth)/                  # login, signup, onboarding
 │   ├── (tabs)/
@@ -258,7 +258,7 @@ Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopk
 - ✅ Eat-Out Menu Scanner
 - ✅ Shopkeeper Inventory Management
 - ✅ Allergen Recall & Push Notifications
-- ✅ AI Health Co-pilot (conversational, Gemini-powered)
+- ✅ Sage — AI Health Co-pilot (conversational, Gemini-powered)
 - ✅ Read-aloud / accessibility verdict
 - 🔜 Customer-facing "safe for me" shop view
 
