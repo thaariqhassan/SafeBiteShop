@@ -55,10 +55,8 @@ export default ({ config }) => ({
   },
   assetBundlePatterns: ["**/*"],
   extra: {
-    SUPABASE_URL: process.env.SUPABASE_URL,
-    SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-    "eas": {
-        "projectId": "cdcbe9db-330b-4f53-ad53-9eadab97935c"
-      }
+    eas: {
+      projectId: "cdcbe9db-330b-4f53-ad53-9eadab97935c",
+    },
   },
 });
