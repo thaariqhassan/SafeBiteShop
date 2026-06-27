@@ -124,6 +124,16 @@ export default function RootLayout() {
             animationDuration: 500,
           }}
         />
+        <Stack.Screen
+          name="copilot"
+          options={{
+            headerTitle: "SafeBite Co-pilot",
+            headerStyle: { backgroundColor: "#004d00" },
+            headerTintColor: "#ffffff",
+            animation: "fade",
+            animationDuration: 500,
+          }}
+        />
       </Stack>
     </>
   );

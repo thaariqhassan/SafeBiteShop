@@ -48,6 +48,10 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 - 🎯 **Profile-aware severity** — if the recall reason (e.g. *"undeclared peanuts"*) matches the active profile's allergies, the alert is escalated with a **"do not eat"** warning tied to that person.
 - 🛌 **Works in the background** — be warned about food already in your kitchen before you eat it.
 
+### 🤖 AI Health Co-pilot
+
+A conversational assistant (powered by **Google Gemini**) that you can ask anything — *"Can I eat this with my warfarin?"*, *"What should I avoid today?"*, *"Suggest a safe snack."* It's grounded in your **active health profile** (allergies, conditions, medications, diet) **and your recently scanned products**, so every answer is personal — not generic. Reachable from the **Ask Co-pilot** button on Home.
+
 ### 🍳 Eat better
 
 - **Recipe Suggestions** — enter the ingredients you have → health-safe recipes that respect your allergies, diet, conditions and medications.
@@ -90,6 +94,7 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 | **Backend** | Node.js + Express.js (deployed on Render, with keep-alive ping) |
 | **AI — Text** | Groq: `llama-3.1-8b-instant` (summaries), `llama-3.3-70b-versatile` (recommendations, recipes, meal plans) |
 | **AI — Vision** | Groq: `meta-llama/llama-4-scout-17b-16e-instruct` (label & menu reading) |
+| **AI — Co-pilot** | Google Gemini (`gemini-2.5-flash`) — conversational health assistant |
 | **Database & Auth** | Supabase (PostgreSQL + Auth, row-level security) |
 | **Local Storage** | AsyncStorage — offline cache, active profile, streak, reco cache |
 | **Product Data** | Open Food Facts API |
@@ -139,6 +144,7 @@ SafeBite/
 │   ├── privacy.tsx              # Privacy policy
 │   ├── label-scan.tsx           # 📸 Snap-the-label (vision)
 │   ├── menu-scan.tsx            # 🍽️ Eat-out menu scanner (vision)
+│   ├── copilot.tsx             # 🤖 AI Health Co-pilot chat (Gemini)
 │   ├── shop_interface.tsx       # Shopkeeper inventory (CRUD)
 │   ├── (auth)/                  # login, signup, onboarding
 │   ├── (tabs)/
@@ -154,10 +160,12 @@ SafeBite/
 │   ├── healthTip.ts  labelScan.ts  menuScan.ts  shopProducts.ts
 │   ├── recall.ts                # recall matching against openFDA + scanned products
 │   ├── notifications.ts         # local push notifications (expo-notifications)
+│   ├── copilot.ts               # AI co-pilot client (sends profile + scans to Gemini)
 ├── backend/
 │   ├── server.js
 │   ├── routes/                  # summary, recommendation, recipes,
-│   │                            # alternatives, scanLabel, scanMenu
+│   │                            # alternatives, scanLabel, scanMenu, copilot
+│   ├── controller/copilotController.js  # Gemini chat co-pilot (consultCopilot)
 │   ├── controller/aiController.js  # Groq text + vision (askAI, consultAi,
 │   │                                # generateRecipes, generateMealPlan,
 │   │                                # analyzeLabelImage, analyzeMenuImage)
@@ -183,6 +191,7 @@ SafeBite/
 | `POST /api/alternatives` | Healthier, profile-safe product swaps |
 | `POST /api/scan-label` | Vision: read an ingredients label into product data |
 | `POST /api/scan-menu` | Vision: rate menu dishes for the profile |
+| `POST /api/copilot` | Conversational health co-pilot (Gemini), grounded in profile + recent scans |
 
 ---
 
@@ -205,7 +214,10 @@ PORT=3000
 EXPO_PUBLIC_PROJECT_URL=https://your-project.supabase.co
 EXPO_PUBLIC_PUBLIC_ANON_KEY=your-anon-key
 GROQ_API_KEY3=your-groq-key
+GEMINI_API_KEY=your-gemini-key
 ```
+
+> The co-pilot uses `GEMINI_API_KEY` (Google AI Studio). Optionally override the model with `GEMINI_MODEL` (defaults to `gemini-2.5-flash`).
 
 **Start the app & backend:**
 ```bash
@@ -240,6 +252,7 @@ Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopk
 - ✅ Eat-Out Menu Scanner
 - ✅ Shopkeeper Inventory Management
 - ✅ Allergen Recall & Push Notifications
+- ✅ AI Health Co-pilot (conversational, Gemini-powered)
 - 🔜 Customer-facing "safe for me" shop view
 - 🔜 Read-aloud / accessibility verdict
 
