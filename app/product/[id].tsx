@@ -15,6 +15,7 @@ import { MedicationWarning } from "@/constants/medicationInteractions";
 import { logNutrition } from "@/services/nutritionLog";
 import { cacheProduct, getCachedProduct, updateCachedSummary } from "@/services/scanCache";
 import { AlternativeProduct, getHealthierAlternatives } from "@/services/alternatives";
+import { speak, stopSpeaking } from "@/services/speech";
 
 export interface ProductData {
   product_name: string;
@@ -50,9 +51,37 @@ const ProductSummary = () => {
   const [logLoading, setLogLoading] = useState(false);
   const [alternatives, setAlternatives] = useState<AlternativeProduct[]>([]);
   const [altLoading, setAltLoading] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   const navigation = useNavigation();
   const router = useRouter();
+
+  // Stop any narration when leaving the screen.
+  useEffect(() => () => stopSpeaking(), []);
+
+  // Read the whole safety verdict aloud — product, allergens, medication
+  // interactions, then the AI summary — for low-vision / hands-busy users.
+  const toggleSpeak = () => {
+    if (speaking) {
+      stopSpeaking();
+      setSpeaking(false);
+      return;
+    }
+    const parts: string[] = [];
+    parts.push(productData?.product_name || "Unknown product");
+    if (productData?.allergens) parts.push(`Allergens: ${productData.allergens}.`);
+    if (medicationWarnings.length > 0) {
+      parts.push("Warning: medication interaction detected.");
+      medicationWarnings.forEach((w) =>
+        parts.push(`${w.medication}. ${w.reason}.`)
+      );
+    }
+    if (summaryData) parts.push(summaryData);
+    speak(parts.join(". "), {
+      onStart: () => setSpeaking(true),
+      onDone: () => setSpeaking(false),
+    });
+  };
   useEffect(() => {
     const fetchData = async () => {
       const applyProduct = (p: any) => {
@@ -392,9 +421,51 @@ const ProductSummary = () => {
               </View>
             ) : null}
             <View className="mt-5">
-              <Text className="text-lg font-semibold text-gray-800 mb-2">
-                AI Summary
-              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                }}
+              >
+                <Text className="text-lg font-semibold text-gray-800">
+                  AI Summary
+                </Text>
+                {!summaryLoading && (summaryData || medicationWarnings.length > 0) ? (
+                  <TouchableOpacity
+                    onPress={toggleSpeak}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      speaking ? "Stop reading the verdict aloud" : "Read the verdict aloud"
+                    }
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      backgroundColor: speaking ? "#fee2e2" : "#dcfce7",
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 20,
+                    }}
+                  >
+                    <Ionicons
+                      name={speaking ? "stop" : "volume-high"}
+                      size={16}
+                      color={speaking ? "#dc2626" : "#15803d"}
+                    />
+                    <Text
+                      style={{
+                        marginLeft: 6,
+                        fontSize: 13,
+                        fontWeight: "700",
+                        color: speaking ? "#dc2626" : "#15803d",
+                      }}
+                    >
+                      {speaking ? "Stop" : "Listen"}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
               {summaryLoading ? (
                 <View>
                   <ActivityIndicator size="large" color="#15803d" />

@@ -52,6 +52,10 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 
 A conversational assistant (powered by **Google Gemini**) that you can ask anything — *"Can I eat this with my warfarin?"*, *"What should I avoid today?"*, *"Suggest a safe snack."* It's grounded in your **active health profile** (allergies, conditions, medications, diet) **and your recently scanned products**, so every answer is personal — not generic. Reachable from the **Ask Co-pilot** button on Home.
 
+### ♿ Accessibility
+
+- 🔊 **Read-aloud verdict** — a **Listen** button on every product reads the whole safety verdict aloud (name → allergens → medication interactions → AI summary), so low-vision, elderly, or hands-busy users can *hear* whether a food is safe. The co-pilot's answers can be read aloud too.
+
 ### 🍳 Eat better
 
 - **Recipe Suggestions** — enter the ingredients you have → health-safe recipes that respect your allergies, diet, conditions and medications.
@@ -91,6 +95,7 @@ A conversational assistant (powered by **Google Gemini**) that you can ask anyth
 | **Styling** | NativeWind (Tailwind CSS), React Native Reanimated |
 | **Camera & Imaging** | expo-camera, expo-image-picker, expo-image-manipulator |
 | **Notifications** | expo-notifications (local push for recall alerts) |
+| **Accessibility** | expo-speech (read-aloud safety verdict) |
 | **Backend** | Node.js + Express.js (deployed on Render, with keep-alive ping) |
 | **AI — Text** | Groq: `llama-3.1-8b-instant` (summaries), `llama-3.3-70b-versatile` (recommendations, recipes, meal plans) |
 | **AI — Vision** | Groq: `meta-llama/llama-4-scout-17b-16e-instruct` (label & menu reading) |
@@ -161,6 +166,7 @@ SafeBite/
 │   ├── recall.ts                # recall matching against openFDA + scanned products
 │   ├── notifications.ts         # local push notifications (expo-notifications)
 │   ├── copilot.ts               # AI co-pilot client (sends profile + scans to Gemini)
+│   ├── speech.ts                # read-aloud verdict (expo-speech)
 ├── backend/
 │   ├── server.js
 │   ├── routes/                  # summary, recommendation, recipes,
@@ -253,8 +259,8 @@ Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopk
 - ✅ Shopkeeper Inventory Management
 - ✅ Allergen Recall & Push Notifications
 - ✅ AI Health Co-pilot (conversational, Gemini-powered)
+- ✅ Read-aloud / accessibility verdict
 - 🔜 Customer-facing "safe for me" shop view
-- 🔜 Read-aloud / accessibility verdict
 
 ---
 

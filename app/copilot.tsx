@@ -12,6 +12,7 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { askCopilot, ChatMessage } from "@/services/copilot";
 import { getActiveProfile } from "@/services/familyProfile";
+import { speak, stopSpeaking } from "@/services/speech";
 
 const SUGGESTIONS = [
   "What should I avoid eating today?",
@@ -25,11 +26,27 @@ const Copilot = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [advisingName, setAdvisingName] = useState("");
+  const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     getActiveProfile().then((p) => setAdvisingName(p.name));
   }, []);
+
+  // Stop narration when leaving the screen.
+  useEffect(() => () => stopSpeaking(), []);
+
+  const toggleSpeak = (idx: number, text: string) => {
+    if (speakingIdx === idx) {
+      stopSpeaking();
+      setSpeakingIdx(null);
+      return;
+    }
+    speak(text, {
+      onStart: () => setSpeakingIdx(idx),
+      onDone: () => setSpeakingIdx(null),
+    });
+  };
 
   useEffect(() => {
     // Keep the latest message in view.
@@ -173,6 +190,37 @@ const Copilot = () => {
               >
                 {m.content}
               </Text>
+              {m.role === "assistant" ? (
+                <TouchableOpacity
+                  onPress={() => toggleSpeak(i, m.content)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    speakingIdx === i ? "Stop reading aloud" : "Read this answer aloud"
+                  }
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginTop: 8,
+                    alignSelf: "flex-start",
+                  }}
+                >
+                  <Ionicons
+                    name={speakingIdx === i ? "stop-circle" : "volume-high"}
+                    size={15}
+                    color={speakingIdx === i ? "#dc2626" : "#15803d"}
+                  />
+                  <Text
+                    style={{
+                      marginLeft: 5,
+                      fontSize: 12,
+                      fontWeight: "600",
+                      color: speakingIdx === i ? "#dc2626" : "#15803d",
+                    }}
+                  >
+                    {speakingIdx === i ? "Stop" : "Listen"}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ))
         )}
