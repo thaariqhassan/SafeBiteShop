@@ -125,6 +125,16 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="med-reminders"
+          options={{
+            headerTitle: "Medication Reminders",
+            headerStyle: { backgroundColor: "#004d00" },
+            headerTintColor: "#ffffff",
+            animation: "fade",
+            animationDuration: 500,
+          }}
+        />
+        <Stack.Screen
           name="copilot"
           options={{
             headerTitle: "SafeBite Sage",

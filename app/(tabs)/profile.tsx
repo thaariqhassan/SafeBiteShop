@@ -306,6 +306,18 @@ const profile = () => {
         />
       </Card>
 
+      {/* Medication reminders */}
+      <SectionLabel>Medications</SectionLabel>
+      <Card>
+        <Row
+          icon="alarm-outline"
+          label="Medication Reminders"
+          value="Set up"
+          onPress={() => router.push("/med-reminders")}
+          last
+        />
+      </Card>
+
       {/* Accessibility */}
       <SectionLabel>Accessibility</SectionLabel>
       <Card>

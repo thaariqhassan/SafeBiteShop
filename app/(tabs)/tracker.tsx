@@ -11,10 +11,11 @@ import {
 import { supabase } from "@/lib/supabase";
 import {
   deleteLog,
-  getTodayLogs,
+  getLogsSince,
   NutritionLogEntry,
 } from "@/services/nutritionLog";
 import { exportHealthReport } from "@/services/healthReport";
+import NutritionTrends from "@/components/NutritionTrends";
 import {
   getNutritionLimits,
   NutritionLimit,
@@ -97,8 +98,15 @@ const dateLabel = today.toLocaleDateString([], {
   day: "numeric",
 });
 
+const startOfToday = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
 const tracker = () => {
   const [logs, setLogs] = useState<NutritionLogEntry[]>([]);
+  const [weekLogs, setWeekLogs] = useState<NutritionLogEntry[]>([]);
   const [limits, setLimits] = useState<NutritionLimit | null>(null);
   const [score, setScore] = useState<HealthScore | null>(null);
   const [streak, setStreak] = useState(0);
@@ -107,8 +115,8 @@ const tracker = () => {
   const [exporting, setExporting] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [logsData, profileRes] = await Promise.all([
-      getTodayLogs(),
+    const [weekData, profileRes] = await Promise.all([
+      getLogsSince(7),
       supabase.auth.getUser().then(({ data: u }) =>
         supabase
           .from("Customerdetails")
@@ -117,6 +125,12 @@ const tracker = () => {
           .single()
       ),
     ]);
+    setWeekLogs(weekData);
+    // Today's logs are the head of the 7-day window — no second query needed.
+    const todayStart = startOfToday();
+    const logsData = weekData.filter(
+      (l) => new Date(l.scanned_at).getTime() >= todayStart
+    );
     setLogs(logsData);
     const conditions: string[] = profileRes.data?.medical_conditions ?? [];
     const lim = getNutritionLimits(conditions);
@@ -151,6 +165,7 @@ const tracker = () => {
   const handleDelete = async (id: string) => {
     await deleteLog(id);
     setLogs((prev) => prev.filter((l) => l.id !== id));
+    setWeekLogs((prev) => prev.filter((l) => l.id !== id));
   };
 
   const handleExport = async () => {
@@ -284,6 +299,8 @@ const tracker = () => {
           </Text>
         </View>
       )}
+
+      {limits && <NutritionTrends weekLogs={weekLogs} limits={limits} />}
 
       <Text style={{ fontSize: 16, fontWeight: "bold", color: "#111827", marginBottom: 10 }}>
         Food Diary

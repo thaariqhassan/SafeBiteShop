@@ -68,10 +68,12 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 - **Daily Health Score** — a 0–100 score from today's logged food vs. your condition-adjusted limits.
 - **Safe-Eating Streak** — consecutive qualifying days, to build the habit.
 - **Nutrition Tracker & Food Diary** — calories, sugar, fat, salt, protein vs. personalised limits that auto-tighten for your conditions.
+- **7-Day Trends** — a per-day sugar & salt chart with a plain-language read ("your sodium is trending up"), so the tracker shows movement over time, not just today's snapshot.
 
 ### 🩺 Clinical companion
 
 - 💊 **Food × Medication cross-link at log time** — when you add a food to your diary that interacts with one of your medications (e.g. *grapefruit while on a statin*), SafeBite flags it the moment you log it, tags the diary entry, and shows a daily "items that interact with your medication" banner.
+- ⏰ **Medication reminders with food-timing warnings** — schedule a daily dose reminder for each medication; the notification also names the foods to avoid around that dose (e.g. *"Time for your statin — avoid grapefruit within a few hours"*), turning the food–drug interaction map into a proactive nudge. Reminders are profile-aware and stay in sync as you edit your medications.
 - 📄 **Export Health Report (PDF)** — generate a shareable 7-day report — health profile, personalised daily limits, food diary grouped by day, and every flagged food–medication interaction — and send it straight to your **doctor or dietitian** from the native share sheet. Positions SafeBite as a clinical companion, not just a scanner.
 
 ### 🏠 Home & convenience
@@ -156,6 +158,7 @@ SafeBite/
 │   ├── label-scan.tsx           # 📸 Snap-the-label (vision)
 │   ├── menu-scan.tsx            # 🍽️ Eat-out menu scanner (vision)
 │   ├── copilot.tsx             # 🤖 Sage — AI Health Co-pilot chat (Gemini)
+│   ├── med-reminders.tsx        # ⏰ Medication dose reminders + food-timing warnings
 │   ├── shop_interface.tsx       # Shopkeeper inventory (CRUD)
 │   ├── (auth)/                  # login, signup, onboarding
 │   ├── (tabs)/
@@ -169,8 +172,10 @@ SafeBite/
 │   ├── summary.ts  recommendation.ts  familyProfile.ts  nutritionLog.ts
 │   ├── scanCache.ts  recipes.ts  alternatives.ts  healthScore.ts
 │   ├── healthTip.ts  labelScan.ts  menuScan.ts  shopProducts.ts
+│   ├── healthReport.ts  settings.ts
 │   ├── recall.ts                # recall matching against openFDA + scanned products
-│   ├── notifications.ts         # local push notifications (expo-notifications)
+│   ├── notifications.ts         # local push + daily-scheduled notifications (expo-notifications)
+│   ├── medReminder.ts           # medication dose reminders + food-timing warnings
 │   ├── copilot.ts               # AI co-pilot client (sends profile + scans to Gemini)
 │   ├── speech.ts                # read-aloud verdict (expo-speech)
 ├── backend/
@@ -184,7 +189,7 @@ SafeBite/
 │   └── utils/                   # hashProfile, scraper
 ├── constants/                   # const, medicationInteractions,
 │   │                            # nutritionLimits, allergenKeywords
-├── components/                  # recomentation, RecipeCard
+├── components/                  # recomentation, RecipeCard, NutritionTrends
 ├── supabase/shop_products.sql   # Shopkeeper inventory table + RLS
 └── lib/                         # supabase, auth, actions
 ```
@@ -268,6 +273,8 @@ Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopk
 - ✅ Read-aloud / accessibility verdict
 - ✅ Food × Medication cross-link at log time
 - ✅ Export Health Report (PDF) for doctors / dietitians
+- ✅ Medication reminders with food-timing warnings
+- ✅ 7-day nutrition trends (sugar & salt)
 - 🔜 Customer-facing "safe for me" shop view
 
 ---
