@@ -61,7 +61,12 @@ const signup = () => {
         </SText>
         <InputWithLabel name="Username" value={username} change={setUsername} />
         <InputWithLabel name="Email" value={email} change={setEmail} />
-        <InputWithLabel name="Password" value={password} change={setPassword} />
+        <InputWithLabel
+          name="Password"
+          value={password}
+          change={setPassword}
+          secure
+        />
 
         {isShopkeeper && (
           <>
