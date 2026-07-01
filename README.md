@@ -69,6 +69,11 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 - **Safe-Eating Streak** — consecutive qualifying days, to build the habit.
 - **Nutrition Tracker & Food Diary** — calories, sugar, fat, salt, protein vs. personalised limits that auto-tighten for your conditions.
 
+### 🩺 Clinical companion
+
+- 💊 **Food × Medication cross-link at log time** — when you add a food to your diary that interacts with one of your medications (e.g. *grapefruit while on a statin*), SafeBite flags it the moment you log it, tags the diary entry, and shows a daily "items that interact with your medication" banner.
+- 📄 **Export Health Report (PDF)** — generate a shareable 7-day report — health profile, personalised daily limits, food diary grouped by day, and every flagged food–medication interaction — and send it straight to your **doctor or dietitian** from the native share sheet. Positions SafeBite as a clinical companion, not just a scanner.
+
 ### 🏠 Home & convenience
 
 - **Recently Scanned** carousel — reopen recent products instantly (offline-friendly).
@@ -96,6 +101,7 @@ SafeBite doesn't stop protecting you when you close the app. It remembers every 
 | **Camera & Imaging** | expo-camera, expo-image-picker, expo-image-manipulator |
 | **Notifications** | expo-notifications (local push for recall alerts) |
 | **Accessibility** | expo-speech (read-aloud safety verdict) |
+| **Reporting** | expo-print + expo-sharing (PDF health report export) |
 | **Backend** | Node.js + Express.js (deployed on Render, with keep-alive ping) |
 | **AI — Text** | Groq: `llama-3.1-8b-instant` (summaries), `llama-3.3-70b-versatile` (recommendations, recipes, meal plans) |
 | **AI — Vision** | Groq: `meta-llama/llama-4-scout-17b-16e-instruct` (label & menu reading) |
@@ -118,7 +124,7 @@ Supabase tables that power the app:
 | `Customerdetails` | Health profile — allergies, conditions, medications, dietary |
 | `Shopkeepers` | Business details for shopkeeper accounts |
 | `family_members` | Additional health profiles per account |
-| `nutrition_logs` | Daily food diary entries per user |
+| `nutrition_logs` | Daily food diary entries per user (incl. `med_flags` — see `supabase/nutrition_logs_med_flags.sql`) |
 | `recommended_products` | Profile-hash keyed cache for AI recommendations |
 | `shop_products` | Per-shopkeeper inventory (RLS-scoped) — see `supabase/shop_products.sql` |
 
@@ -210,8 +216,8 @@ cd SafeBite
 
 **Frontend `.env`:**
 ```
-EXPO_PUBLIC_PROJECT_URL=https://your-project.supabase.co
-EXPO_PUBLIC_PUBLIC_ANON_KEY=your-anon-key
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 **`backend/.env`:**
@@ -233,7 +239,7 @@ npx expo start
 cd backend && npm install && node server.js
 ```
 
-Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopkeeper inventory. The deployed backend base URL is configured in the client `services/`.
+Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopkeeper inventory, and `supabase/nutrition_logs_med_flags.sql` to enable medication-interaction flags on diary entries. The deployed backend base URL is configured in the client `services/`.
 
 ---
 
@@ -260,6 +266,8 @@ Run `supabase/shop_products.sql` once in the Supabase SQL editor to enable shopk
 - ✅ Allergen Recall & Push Notifications
 - ✅ Sage — AI Health Co-pilot (conversational, Gemini-powered)
 - ✅ Read-aloud / accessibility verdict
+- ✅ Food × Medication cross-link at log time
+- ✅ Export Health Report (PDF) for doctors / dietitians
 - 🔜 Customer-facing "safe for me" shop view
 
 ---
