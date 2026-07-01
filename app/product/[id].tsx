@@ -719,11 +719,27 @@ const ProductSummary = () => {
                 fat: parseFloat(productData?.nutriments?.["fat_100g"]) || 0,
                 salt: parseFloat(productData?.nutriments?.["salt_100g"]) || 0,
                 protein: parseFloat(productData?.nutriments?.["proteins_100g"]) || 0,
-              }
+              },
+              medicationWarnings
             );
             setLogLoading(false);
             if (!error) {
               setLogged(true);
+              // Cross-link: if this food interacts with the profile's
+              // medications, remind the user right when they log it.
+              if (medicationWarnings.length > 0) {
+                const w = medicationWarnings[0];
+                Alert.alert(
+                  "💊 Added — medication heads-up",
+                  `You logged "${productData?.product_name || "this food"}", which can interact with ${w.medication}` +
+                    (medicationWarnings.length > 1
+                      ? ` and ${medicationWarnings.length - 1} other medication${
+                          medicationWarnings.length > 2 ? "s" : ""
+                        }`
+                      : "") +
+                    `.\n\nContains: ${w.triggeredBy.join(", ")}.\n${w.reason}\n\nConsult your doctor or pharmacist before consuming.`
+                );
+              }
             } else {
               Alert.alert(
                 "Couldn't add to diary",

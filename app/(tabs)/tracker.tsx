@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   RefreshControl,
   ScrollView,
   Text,
@@ -13,6 +14,7 @@ import {
   getTodayLogs,
   NutritionLogEntry,
 } from "@/services/nutritionLog";
+import { exportHealthReport } from "@/services/healthReport";
 import {
   getNutritionLimits,
   NutritionLimit,
@@ -102,6 +104,7 @@ const tracker = () => {
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const loadData = useCallback(async () => {
     const [logsData, profileRes] = await Promise.all([
@@ -149,6 +152,16 @@ const tracker = () => {
     await deleteLog(id);
     setLogs((prev) => prev.filter((l) => l.id !== id));
   };
+
+  const handleExport = async () => {
+    setExporting(true);
+    const { error } = await exportHealthReport(new Date().toLocaleString());
+    setExporting(false);
+    if (error) Alert.alert("Couldn't export report", error);
+  };
+
+  // Foods logged today that interact with the active profile's medications.
+  const flaggedLogs = logs.filter((l) => Array.isArray(l.med_flags) && l.med_flags.length > 0);
 
   const totals: Totals = logs.reduce(
     (acc, l) => ({
@@ -218,6 +231,35 @@ const tracker = () => {
           </Text>
         </View>
       </View>
+
+      {flaggedLogs.length > 0 && (
+        <View
+          style={{
+            backgroundColor: "#fff1f2",
+            borderLeftWidth: 5,
+            borderLeftColor: "#dc2626",
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 16,
+          }}
+        >
+          <Text style={{ color: "#b91c1c", fontWeight: "700", fontSize: 14 }}>
+            💊 {flaggedLogs.length} item{flaggedLogs.length > 1 ? "s" : ""} today interact
+            {flaggedLogs.length > 1 ? "" : "s"} with your medication
+          </Text>
+          <Text style={{ color: "#7f1d1d", fontSize: 12, marginTop: 4, lineHeight: 17 }}>
+            {flaggedLogs
+              .map(
+                (l) =>
+                  `${l.product_name} → ${l.med_flags!.map((w) => w.medication).join(", ")}`
+              )
+              .join("\n")}
+          </Text>
+          <Text style={{ color: "#9ca3af", fontSize: 11, marginTop: 6 }}>
+            Consult your doctor or pharmacist about these combinations.
+          </Text>
+        </View>
+      )}
 
       {limits && (
         <View
@@ -303,6 +345,23 @@ const tracker = () => {
                 </View>
               ))}
             </View>
+            {Array.isArray(log.med_flags) && log.med_flags.length > 0 && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#fef2f2",
+                  borderRadius: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 5,
+                  marginTop: 8,
+                }}
+              >
+                <Text style={{ fontSize: 11, color: "#b91c1c", fontWeight: "600", flex: 1 }}>
+                  ⚠️ Interacts with {log.med_flags.map((w) => w.medication).join(", ")}
+                </Text>
+              </View>
+            )}
             <TouchableOpacity
               onPress={() => handleDelete(log.id)}
               style={{ alignSelf: "flex-end", marginTop: 8 }}
@@ -312,6 +371,33 @@ const tracker = () => {
           </View>
         ))
       )}
+
+      <TouchableOpacity
+        onPress={handleExport}
+        disabled={exporting}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#004d00",
+          paddingVertical: 14,
+          borderRadius: 14,
+          marginTop: 18,
+          opacity: exporting ? 0.6 : 1,
+        }}
+      >
+        {exporting ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
+          <Text style={{ color: "#ffffff", fontWeight: "700", fontSize: 15 }}>
+            🩺 Export Health Report (PDF)
+          </Text>
+        )}
+      </TouchableOpacity>
+      <Text style={{ color: "#9ca3af", fontSize: 11, textAlign: "center", marginTop: 8 }}>
+        A 7-day summary of your diary, limits & medication flags — to share with your
+        doctor or dietitian.
+      </Text>
     </ScrollView>
   );
 };
