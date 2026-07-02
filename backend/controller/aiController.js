@@ -193,6 +193,37 @@ Rules: exactly ${days} days, 3 meals each, short strings, accurate calorie estim
   return extractJson(result.choices[0].message.content, "object");
 };
 
+// Single fast call that re-ranks pre-filtered, pre-scored candidates for the
+// user's profile. Purely a nice-to-have on top of the deterministic ranking —
+// callers must fall back to their own order if this throws or times out.
+const rerankRecommendations = async (userProfile, candidates) => {
+  const prompt = `User health profile:
+- Allergies: ${(userProfile.allergies || []).join(", ") || "none"}
+- Medical conditions: ${(userProfile.conditions || []).join(", ") || "none"}
+- Dietary restrictions: ${(userProfile.dietary || []).join(", ") || "none"}
+
+Candidate food products (already filtered as safe for this user):
+${JSON.stringify(candidates)}
+
+Pick the 10 products that best suit this user's health profile, healthiest and most relevant first. Use only IDs from the list above.
+Return ONLY a JSON array of product ID strings, no other text.`;
+
+  const result = await groq.chat.completions.create({
+    model: "llama-3.1-8b-instant",
+    temperature: 0.2,
+    max_tokens: 500,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a JSON-only assistant. Output ONLY a valid JSON array of strings — no markdown, no explanations.",
+      },
+      { role: "user", content: prompt },
+    ],
+  });
+  return extractJson(result.choices[0].message.content, "array");
+};
+
 // Reads a food-label photo with a vision model and extracts structured product
 // data, so products without a barcode (or missing from OpenFoodFacts) can still
 // be analysed by the normal safety pipeline.
@@ -285,6 +316,7 @@ If the image is not a readable menu, return [].`;
 module.exports = {
   askAI,
   consultAi,
+  rerankRecommendations,
   generateRecipes,
   generateMealPlan,
   analyzeLabelImage,

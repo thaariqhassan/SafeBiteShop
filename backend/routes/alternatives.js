@@ -1,58 +1,10 @@
 const express = require("express");
 const fs = require("fs");
+const { gradeRank, isSafeForProfile } = require("../utils/profileSafety");
 
 const router = express.Router();
 
 const products = JSON.parse(fs.readFileSync("products.json", "utf8"));
-
-const GRADE_RANK = { a: 1, b: 2, c: 3, d: 4, e: 5 };
-const gradeRank = (g) => GRADE_RANK[(g || "").toLowerCase()] || 6;
-
-// Map each allergy label to the ingredient keywords that should trigger it, so
-// e.g. a "Nuts" allergy correctly excludes products containing "almond" or
-// "peanut" rather than only the literal word "nuts".
-const ALLERGEN_KEYWORDS = {
-  nuts: ["nut", "almond", "cashew", "hazelnut", "walnut", "pecan", "pistachio", "macadamia", "peanut"],
-  peanuts: ["peanut", "groundnut", "arachis"],
-  dairy: ["milk", "cheese", "butter", "cream", "yogurt", "yoghurt", "lactose", "whey", "casein"],
-  shellfish: ["shrimp", "prawn", "crab", "lobster", "crayfish", "oyster", "clam", "mussel", "scallop", "squid"],
-  gluten: ["gluten", "wheat", "barley", "rye", "malt", "spelt"],
-  wheat: ["wheat", "flour"],
-  soy: ["soy", "soya", "soybean", "tofu", "edamame"],
-  eggs: ["egg", "albumin", "mayonnaise"],
-  sesame: ["sesame", "tahini"],
-  fish: ["fish", "cod", "tuna", "salmon", "haddock", "anchovy", "sardine", "mackerel"],
-};
-
-// products.json carries no allergen/category tags, so safety is checked from
-// nutriments + ingredients_text (same approach as the recommendation filter).
-const isSafeForProfile = (product, userProfile) => {
-  const conditions = (userProfile.conditions || []).map((c) =>
-    c.toLowerCase().trim()
-  );
-  const allergies = (userProfile.allergies || [])
-    .map((a) => a.toLowerCase().trim())
-    .filter((a) => a && a !== "none");
-  const text = (product.ingredients_text || "").toLowerCase();
-  const n = product.nutriments || {};
-
-  // Allergen keyword guard (uses synonyms so "Nuts" catches "almond", "peanut"…)
-  for (const allergy of allergies) {
-    const keywords = ALLERGEN_KEYWORDS[allergy] || [allergy];
-    if (keywords.some((kw) => text.includes(kw))) return false;
-  }
-
-  for (const condition of conditions) {
-    if (condition === "diabetes" && (n.sugars_100g > 5 || n.carbohydrates_100g > 20)) return false;
-    if (condition === "hypertension" && (n.salt_100g > 0.3 || n.sodium_100g > 0.12)) return false;
-    if (condition === "high cholesterol" && n["saturated-fat_100g"] > 2) return false;
-    if (condition === "celiac disease" && /gluten|wheat|barley|rye/.test(text)) return false;
-    if (condition === "lactose intolerance" && /milk|lactose|cheese|butter/.test(text)) return false;
-    if (condition === "heart disease" && n.salt_100g > 0.3) return false;
-    if (condition === "kidney disease" && n.proteins_100g > 10) return false;
-  }
-  return true;
-};
 
 // Token overlap with the scanned product's name/ingredients, for relevance.
 const tokenize = (s) =>

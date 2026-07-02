@@ -1,222 +1,167 @@
 const express = require("express");
-const { consultAi } = require("../controller/aiController");
 const fs = require("fs");
 const router = express.Router();
 const hashProfile = require("../utils/hashProfile");
+const { rerankRecommendations } = require("../controller/aiController");
+const {
+  violatesAllergy,
+  violatesDietary,
+  violatesCondition,
+  healthScore,
+  buildReason,
+} = require("../utils/profileSafety");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config();
 
 const products = JSON.parse(fs.readFileSync("products.json", "utf8"));
+const productsById = new Map(products.map((p) => [p.id, p]));
+
 const supabase = createClient(
   process.env.EXPO_PUBLIC_PROJECT_URL,
   process.env.EXPO_PUBLIC_PUBLIC_ANON_KEY,
 );
 
-function handleFilter(products, userProfile) {
-  const { allergies = [], conditions = [], dietary = [] } = userProfile;
+// Bump to invalidate Supabase-cached recommendations whenever the filtering /
+// scoring rules change (the version is mixed into the profile hash).
+const RULES_VERSION = 3;
+const RESULT_COUNT = 10;
+const RERANK_POOL = 20;
+const RERANK_TIMEOUT_MS = 8000;
 
-  return products.filter((product) => {
-    const allergens = Array.isArray(product.allergens_tags)
-      ? product.allergens_tags
-      : [];
-    const labels = Array.isArray(product.labels_tags)
-      ? product.labels_tags
-      : [];
+const withTimeout = (promise, ms) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), ms),
+    ),
+  ]);
 
-    // ✅ 1. Filter allergens (e.g., en:gluten)
-    const hasAllergens = allergies.some((allergy) => {
-      if (allergy.toLowerCase().trim() === "none") return false;
-      return allergens.includes(`en:${allergy.toLowerCase().trim()}`);
-    });
+// Rank all profile-safe products by health score, deduped by product name so
+// the shelf isn't ten near-identical peanut butters.
+const rankSafeProducts = (userProfile) => {
+  const safe = [];
+  let conditionsRelaxed = false;
 
-    // ✅ 2. Filter dietary tags (e.g., en:vegan, en:vegetarian)
-    const isDietRestricted = dietary.some((diet) => {
-      if (diet.toLowerCase().trim() === "none") return false;
-      return !labels.includes(`en:${diet.toLowerCase().trim()}`);
-    });
+  const collect = (relaxConditions) => {
+    safe.length = 0;
+    for (const p of products) {
+      if (!p.product_name || !p.id) continue;
+      if (violatesAllergy(p, userProfile.allergies)) continue;
+      if (violatesDietary(p, userProfile.dietary)) continue;
+      if (!relaxConditions && violatesCondition(p, userProfile.conditions)) continue;
+      safe.push(p);
+    }
+  };
 
-    // ✅ 3. Filter based on medical conditions (this is tricky — basic version)
-    // Example: avoid sugar if diabetic
-    const conditionFails = conditions.some((condition) => {
-      condition = condition.toLowerCase().trim();
+  collect(false);
+  if (safe.length < RESULT_COUNT) {
+    // Condition thresholds can be too strict for this catalogue — relax them,
+    // but NEVER the allergy/dietary rules.
+    conditionsRelaxed = true;
+    collect(true);
+  }
 
-      if (condition === "diabetes") {
-        return (
-          product.nutriments?.sugars_100g > 5 ||
-          product.nutriments?.carbohydrates_100g > 20
-        );
-      }
+  const ranked = safe
+    .map((p) => ({ p, score: healthScore(p, userProfile) }))
+    .sort((a, b) => b.score - a.score);
 
-      if (condition === "hypertension") {
-        return (
-          product.nutriments?.salt_100g > 0.3 ||
-          product.nutriments?.sodium_100g > 0.12
-        );
-      }
+  const seenNames = new Set();
+  const deduped = [];
+  for (const { p } of ranked) {
+    const nameKey = p.product_name.toLowerCase().replace(/[^a-z]/g, "");
+    if (seenNames.has(nameKey)) continue;
+    seenNames.add(nameKey);
+    deduped.push(p);
+  }
+  return { ranked: deduped, conditionsRelaxed };
+};
 
-      if (condition === "high cholesterol") {
-        return (
-          product.nutriments?.saturated_fat_100g > 2 ||
-          product.nutriments?.trans_fat_100g > 0.1
-        );
-      }
-
-      if (condition === "celiac disease") {
-        return (
-          product.ingredients_text?.toLowerCase().trim().includes("gluten") ||
-          product.ingredients_text?.toLowerCase().trim().includes("wheat") ||
-          product.ingredients_text?.toLowerCase().trim().includes("barley") ||
-          product.ingredients_text?.toLowerCase().trim().includes("rye")
-        );
-      }
-
-      if (condition === "lactose intolerance") {
-        return (
-          product.ingredients_text?.toLowerCase().trim().includes("milk") ||
-          product.ingredients_text?.toLowerCase().trim().includes("lactose") ||
-          product.ingredients_text?.toLowerCase().trim().includes("cheese") ||
-          product.ingredients_text?.toLowerCase().trim().includes("butter")
-        );
-      }
-
-      if (condition === "irritable bowel syndrome (ibs)") {
-        return (
-          product.ingredients_text?.toLowerCase().trim().includes("onion") ||
-          product.ingredients_text?.toLowerCase().trim().includes("garlic") ||
-          product.ingredients_text
-            ?.toLowerCase()
-            .trim()
-            .includes("artificial sweeteners")
-        );
-      }
-
-      if (condition === "gout") {
-        return (
-          product.ingredients_text?.toLowerCase().trim().includes("red meat") ||
-          product.ingredients_text?.toLowerCase().trim().includes("beer") ||
-          product.ingredients_text?.toLowerCase().trim().includes("organ meat")
-        );
-      }
-
-      if (condition === "kidney disease") {
-        return (
-          product.nutriments?.proteins_100g > 10 ||
-          product.nutriments?.potassium_100g > 0.3
-        );
-      }
-
-      if (condition === "heart disease") {
-        return (
-          product.nutriments?.salt_100g > 0.3 ||
-          product.nutriments?.cholesterol_100g > 0.1
-        );
-      }
-
-      if (condition === "thyroid disorder") {
-        return (
-          product.ingredients_text?.toLowerCase().trim().includes("soy") ||
-          product.ingredients_text?.toLowerCase().trim().includes("broccoli") ||
-          product.ingredients_text?.toLowerCase().trim().includes("cabbage") ||
-          product.ingredients_text?.toLowerCase().trim().includes("kale")
-        );
-      }
-
-      if (condition === "food sensitivities (general)") {
-        return (
-          product.ingredients_text
-            ?.toLowerCase()
-            .trim()
-            .includes("artificial") ||
-          product.ingredients_text
-            ?.toLowerCase()
-            .trim()
-            .includes("preservatives") ||
-          product.ingredients_text?.toLowerCase().trim().includes("coloring")
-        );
-      }
-
-      return false;
-    });
-    if (hasAllergens) console.log("Filtered due to allergens");
-    if (isDietRestricted) console.log("Filtered due to dietary");
-    if (conditionFails) console.log("Filtered due to condition");
-
-    return !hasAllergens && !isDietRestricted && !conditionFails;
-  });
-}
+const toDetails = (ids, userProfile) =>
+  ids
+    .map((id) => productsById.get(id))
+    .filter(Boolean)
+    .map((p) => ({
+      id: p.id,
+      name: p.product_name || "Unknown product",
+      nutriscore_grade: (p.nutriscore_grade || "").toLowerCase(),
+      reason: buildReason(p, userProfile),
+    }));
 
 router.post("/", async (req, res) => {
-  console.log("Received recommendation request:", req.body);
   try {
     const { userProfile } = req.body;
     if (!userProfile) {
-      return res
-        .status(400)
-        .json({ error: "Missing user profile or product list" });
+      return res.status(400).json({ error: "Missing user profile" });
     }
+    const profile = {
+      allergies: userProfile.allergies || [],
+      conditions: userProfile.conditions || [],
+      dietary: userProfile.dietary || [],
+    };
 
-    const profileHash = hashProfile(userProfile);
-    const { data: existing, error } = await supabase
+    // 1. Cached result for this exact profile + rules version?
+    const profileHash = hashProfile({ v: RULES_VERSION, ...profile });
+    const { data: cachedRows } = await supabase
       .from("recommended_products")
       .select("product_ids")
       .eq("profile_hash", profileHash)
-      .single();
-    if (error) {
-      console.error("Error fetching existing recommendations:", error);
-    }
-    if (existing && existing.product_ids) {
-      console.log(
-        "✅ Returning cached product IDs from Supabase:",
-        existing.product_ids,
-      );
-      return res.json({ finalProductIds: existing.product_ids });
-    }
-    const filteredProductList = await handleFilter(products, userProfile);
-    console.log(
-      `✅ Filtered product list based on user profile: ${filteredProductList.length} products found`,
-    );
-    if (filteredProductList.length === 0) {
-      console.warn(
-        "⚠️ No products matched after filtering. Returning first 5 unfiltered.",
-      );
+      .limit(1);
+    const cachedIds = cachedRows?.[0]?.product_ids;
+    if (Array.isArray(cachedIds) && cachedIds.length > 0) {
       return res.json({
-        finalProductIds: products.slice(0, 5).map((p) => p.id),
+        finalProductIds: cachedIds,
+        products: toDetails(cachedIds, profile),
       });
     }
-    function sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
-    }
-    function chunkArray(array, chunk) {
-      return Array.from({ length: Math.ceil(array.length / chunk) }, (_, i) =>
-        array.slice(i * chunk, i * chunk + chunk),
-      );
-    }
-    const maxProducts = 60;
-    const productChunks = chunkArray(
-      filteredProductList.slice(0, maxProducts),
-      3,
+
+    // 2. Deterministic filter + health scoring over the whole catalogue.
+    const { ranked, conditionsRelaxed } = rankSafeProducts(profile);
+    console.log(
+      `✅ ${ranked.length} profile-safe products${conditionsRelaxed ? " (condition rules relaxed)" : ""}`,
     );
-    const allProductIds = new Set(); //Set is a special data structure like an array, but it automatically removes duplicates.
-    for (let i = 0; i < productChunks.length; i++) {
-      const batch = productChunks[i];
-      console.log(`📦 Consulting AI for batch ${i + 1} with ${batch.length}`);
+    let finalIds = ranked.slice(0, RESULT_COUNT).map((p) => p.id);
+
+    // 3. Optional single AI re-rank of the top pool. Strictly best-effort:
+    //    on timeout/parse failure we keep the deterministic order.
+    if (finalIds.length > 0) {
       try {
-        const batchIds = await consultAi(userProfile, batch);
-        batchIds.forEach((id) => allProductIds.add(id));
+        const pool = ranked.slice(0, RERANK_POOL);
+        const candidates = pool.map((p) => ({
+          id: p.id,
+          name: p.product_name,
+          nutriscore: p.nutriscore_grade,
+          sugars_100g: p.nutriments?.sugars_100g ?? null,
+          salt_100g: p.nutriments?.salt_100g ?? null,
+          proteins_100g: p.nutriments?.proteins_100g ?? null,
+        }));
+        const aiIds = await withTimeout(
+          rerankRecommendations(profile, candidates),
+          RERANK_TIMEOUT_MS,
+        );
+        const poolIds = new Set(pool.map((p) => p.id));
+        const valid = [...new Set(aiIds)].filter((id) => poolIds.has(id));
+        if (valid.length >= RESULT_COUNT / 2) {
+          finalIds = [...new Set([...valid, ...finalIds])].slice(0, RESULT_COUNT);
+        }
       } catch (err) {
-        console.error(`❌ Error in batch ${i + 1}:`, err.message);
+        console.warn("⚠️ AI re-rank skipped:", err.message);
       }
-      await sleep(3000);
     }
-    const finalProductIds = Array.from(allProductIds);
-    console.log(`✅ AI returned ${finalProductIds.length} unique product IDs`);
-    await supabase
-      .from("recommended_products")
-      .insert([{ profile_hash: profileHash, product_ids: finalProductIds }]);
-    res.json({ finalProductIds });
+
+    // 4. Cache for the next request with this profile (best-effort).
+    if (finalIds.length > 0) {
+      const { error: insertError } = await supabase
+        .from("recommended_products")
+        .insert([{ profile_hash: profileHash, product_ids: finalIds }]);
+      if (insertError) {
+        console.warn("⚠️ Failed to cache recommendations:", insertError.message);
+      }
+    }
+
+    res.json({ finalProductIds: finalIds, products: toDetails(finalIds, profile) });
   } catch (error) {
-    console.error("Error consulting AI:", error);
-    res.status(500).json({ error: "Failed to consult AI" });
+    console.error("Error building recommendations:", error);
+    res.status(500).json({ error: "Failed to build recommendations" });
   }
 });
 
