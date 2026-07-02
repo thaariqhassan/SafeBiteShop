@@ -17,6 +17,7 @@ import { cacheProduct, getCachedProduct, updateCachedSummary } from "@/services/
 import { AlternativeProduct, getHealthierAlternatives } from "@/services/alternatives";
 import { speak, stopSpeaking } from "@/services/speech";
 import { getReadAloudEnabled } from "@/services/settings";
+import SafetyVerdict from "@/components/SafetyVerdict";
 
 export interface ProductData {
   product_name: string;
@@ -495,6 +496,9 @@ const ProductSummary = () => {
             </View>
           </View>
         </Card>
+
+        {/* Instant profile verdict — deterministic, no AI wait */}
+        <SafetyVerdict product={productData} />
 
         {/* Medication interaction — surfaced near the top for safety */}
         {medicationWarnings.length > 0 && (

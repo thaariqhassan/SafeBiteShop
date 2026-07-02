@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -9,6 +11,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { hapticSuccess, toast } from "@/lib/feedback";
 import {
   addFamilyMember,
   deleteFamilyMember,
@@ -99,9 +102,18 @@ const family = () => {
     }));
   };
 
+  const [switching, setSwitching] = useState(false);
+
   const handleSwitch = async (id: string | null) => {
+    if (switching) return;
+    setSwitching(true);
     await setActiveProfileId(id);
     setLocalActiveId(id);
+    setSwitching(false);
+    hapticSuccess();
+    const name = id === null ? "yourself" : members.find((m) => m.id === id)?.name || "family member";
+    // Scanning context just changed — make that unmissable.
+    toast(`Now scanning as ${name}`);
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -153,9 +165,14 @@ const family = () => {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
     <ScrollView
       style={{ flex: 1, backgroundColor: "#f9fafb" }}
       contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
+      keyboardShouldPersistTaps="handled"
     >
       <Text style={sectionLabel}>My Account</Text>
       <View style={card}>
@@ -372,6 +389,7 @@ const family = () => {
         </View>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

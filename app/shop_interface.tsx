@@ -2,7 +2,9 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -273,7 +275,11 @@ const ShopInterface: React.FC = () => {
 
       {/* Add / edit modal */}
       <Modal visible={modal} transparent animationType="slide" onRequestClose={() => setModal(false)}>
-        <View style={styles.modalBackdrop}>
+        {/* Bottom-sheet form — without this the keyboard covers the lower fields */}
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
               {editingId ? "Edit Product" : "Add Product"}
@@ -371,7 +377,7 @@ const ShopInterface: React.FC = () => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

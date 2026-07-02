@@ -15,6 +15,7 @@ import {
   NutritionLogEntry,
 } from "@/services/nutritionLog";
 import { exportHealthReport } from "@/services/healthReport";
+import { hapticSuccess, toast } from "@/lib/feedback";
 import NutritionTrends from "@/components/NutritionTrends";
 import {
   getNutritionLimits,
@@ -113,45 +114,53 @@ const tracker = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [weekData, profileRes] = await Promise.all([
-      getLogsSince(7),
-      supabase.auth.getUser().then(({ data: u }) =>
-        supabase
-          .from("Customerdetails")
-          .select("medical_conditions")
-          .eq("id", u?.user?.id)
-          .single()
-      ),
-    ]);
-    setWeekLogs(weekData);
-    // Today's logs are the head of the 7-day window — no second query needed.
-    const todayStart = startOfToday();
-    const logsData = weekData.filter(
-      (l) => new Date(l.scanned_at).getTime() >= todayStart
-    );
-    setLogs(logsData);
-    const conditions: string[] = profileRes.data?.medical_conditions ?? [];
-    const lim = getNutritionLimits(conditions);
-    setLimits(lim);
+    try {
+      setLoadError(false);
+      const [weekData, profileRes] = await Promise.all([
+        getLogsSince(7),
+        supabase.auth.getUser().then(({ data: u }) =>
+          supabase
+            .from("Customerdetails")
+            .select("medical_conditions")
+            .eq("id", u?.user?.id)
+            .single()
+        ),
+      ]);
+      setWeekLogs(weekData);
+      // Today's logs are the head of the 7-day window — no second query needed.
+      const todayStart = startOfToday();
+      const logsData = weekData.filter(
+        (l) => new Date(l.scanned_at).getTime() >= todayStart
+      );
+      setLogs(logsData);
+      const conditions: string[] = profileRes.data?.medical_conditions ?? [];
+      const lim = getNutritionLimits(conditions);
+      setLimits(lim);
 
-    const t = logsData.reduce(
-      (acc, l) => ({
-        calories: acc.calories + l.calories,
-        sugar: acc.sugar + l.sugar,
-        fat: acc.fat + l.fat,
-        salt: acc.salt + l.salt,
-        protein: acc.protein + l.protein,
-      }),
-      { calories: 0, sugar: 0, fat: 0, salt: 0, protein: 0 }
-    );
-    const hs = computeHealthScore(t, lim, logsData.length > 0);
-    setScore(hs);
-    setStreak(await updateStreak(hs ? hs.score : null));
-
-    setLoading(false);
-    setRefreshing(false);
+      const t = logsData.reduce(
+        (acc, l) => ({
+          calories: acc.calories + l.calories,
+          sugar: acc.sugar + l.sugar,
+          fat: acc.fat + l.fat,
+          salt: acc.salt + l.salt,
+          protein: acc.protein + l.protein,
+        }),
+        { calories: 0, sugar: 0, fat: 0, salt: 0, protein: 0 }
+      );
+      const hs = computeHealthScore(t, lim, logsData.length > 0);
+      setScore(hs);
+      setStreak(await updateStreak(hs ? hs.score : null));
+    } catch {
+      setLoadError(true);
+    } finally {
+      // Always leave the spinner state, even when a request throws — otherwise
+      // one network hiccup leaves the tab spinning forever.
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -162,17 +171,32 @@ const tracker = () => {
 
   const onRefresh = () => { setRefreshing(true); loadData(); };
 
-  const handleDelete = async (id: string) => {
-    await deleteLog(id);
-    setLogs((prev) => prev.filter((l) => l.id !== id));
-    setWeekLogs((prev) => prev.filter((l) => l.id !== id));
+  const handleDelete = (id: string, name: string) => {
+    Alert.alert("Remove entry", `Remove "${name}" from today's diary?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          await deleteLog(id);
+          setLogs((prev) => prev.filter((l) => l.id !== id));
+          setWeekLogs((prev) => prev.filter((l) => l.id !== id));
+          toast("Removed from diary");
+        },
+      },
+    ]);
   };
 
   const handleExport = async () => {
     setExporting(true);
     const { error } = await exportHealthReport(new Date().toLocaleString());
     setExporting(false);
-    if (error) Alert.alert("Couldn't export report", error);
+    if (error) {
+      Alert.alert("Couldn't export report", error);
+    } else {
+      hapticSuccess();
+      toast("Health report ready to share");
+    }
   };
 
   // Foods logged today that interact with the active profile's medications.
@@ -193,6 +217,43 @@ const tracker = () => {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#15803d" />
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          paddingHorizontal: 36,
+          backgroundColor: "#f9fafb",
+        }}
+      >
+        <Text style={{ fontSize: 34 }}>📡</Text>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "#1f2937", marginTop: 10 }}>
+          Couldn't load your diary
+        </Text>
+        <Text style={{ color: "#6b7280", textAlign: "center", marginTop: 4, fontSize: 13 }}>
+          Check your connection and try again.
+        </Text>
+        <TouchableOpacity
+          onPress={() => {
+            setLoading(true);
+            loadData();
+          }}
+          style={{
+            backgroundColor: "#15803d",
+            borderRadius: 30,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            marginTop: 16,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700" }}>Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -380,7 +441,7 @@ const tracker = () => {
               </View>
             )}
             <TouchableOpacity
-              onPress={() => handleDelete(log.id)}
+              onPress={() => handleDelete(log.id, log.product_name)}
               style={{ alignSelf: "flex-end", marginTop: 8 }}
             >
               <Text style={{ color: "#dc2626", fontSize: 12 }}>Remove</Text>

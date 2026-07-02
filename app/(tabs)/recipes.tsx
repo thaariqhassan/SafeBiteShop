@@ -23,6 +23,9 @@ const recipes = () => {
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [loading, setLoading] = useState<"recipes" | "plan" | null>(null);
   const [error, setError] = useState("");
+  // Distinguishes "no results yet" from "the AI genuinely returned nothing",
+  // so an empty response shows a friendly message instead of a blank screen.
+  const [attempted, setAttempted] = useState(false);
 
   const addIngredient = () => {
     const v = input.trim();
@@ -47,16 +50,22 @@ const recipes = () => {
     const { recipes: r, error: e } = await generateRecipes(ingredients);
     if (e) setError(e);
     setRecipeList(r);
+    setAttempted(true);
     setLoading(null);
   };
 
   const onMealPlan = async () => {
+    if (ingredients.length === 0) {
+      setError("Add at least one ingredient first.");
+      return;
+    }
     setError("");
     setRecipeList([]);
     setLoading("plan");
     const { plan, error: e } = await generateMealPlan(ingredients);
     if (e) setError(e);
     setMealPlan(plan);
+    setAttempted(true);
     setLoading(null);
   };
 
@@ -182,6 +191,20 @@ const recipes = () => {
           {recipeList.map((r, i) => (
             <RecipeCard key={`${r.name}-${i}`} recipe={r} />
           ))}
+        </View>
+      )}
+
+      {/* AI came back empty — show guidance instead of a blank screen */}
+      {!loading && !error && attempted && recipeList.length === 0 && !mealPlan && (
+        <View style={{ alignItems: "center", marginTop: 34, paddingHorizontal: 20 }}>
+          <Ionicons name="restaurant-outline" size={34} color="#9ca3af" />
+          <Text style={{ fontWeight: "700", color: "#374151", fontSize: 15, marginTop: 10 }}>
+            No recipes found
+          </Text>
+          <Text style={{ color: "#6b7280", fontSize: 13, textAlign: "center", marginTop: 4 }}>
+            Try different or more common ingredients — the chef couldn't build a
+            safe recipe from these.
+          </Text>
         </View>
       )}
 

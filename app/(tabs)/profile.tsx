@@ -134,6 +134,7 @@ const profile = () => {
   const [activeProfileName, setActiveProfileName] = useState<string>("");
   const [isProfileSelf, setIsProfileSelf] = useState(true);
   const [readAloud, setReadAloud] = useState(false);
+  const [recallBusy, setRecallBusy] = useState(false);
 
   // Change-password modal
   const [pwModal, setPwModal] = useState(false);
@@ -191,24 +192,38 @@ const profile = () => {
   };
 
   const checkRecallsNow = async () => {
-    const fresh = await runRecallScan();
-    if (fresh.length > 0) {
-      Alert.alert(
-        "Recall found",
-        `${fresh.length} product alert(s) — check the banner on your Home screen.`
-      );
-    } else {
-      Alert.alert("All clear", "No recalls match your scanned products right now.");
+    if (recallBusy) return;
+    setRecallBusy(true);
+    try {
+      const fresh = await runRecallScan();
+      if (fresh.length > 0) {
+        Alert.alert(
+          "Recall found",
+          `${fresh.length} product alert(s) — check the banner on your Home screen.`
+        );
+      } else {
+        Alert.alert("All clear", "No recalls match your scanned products right now.");
+      }
+    } catch {
+      Alert.alert("Couldn't check recalls", "Please check your connection and try again.");
+    } finally {
+      setRecallBusy(false);
     }
   };
 
   const simulateRecall = async () => {
-    await triggerDemoRecall();
-    await runRecallScan();
-    Alert.alert(
-      "Recall simulated",
-      "A notification was sent and the alert is now on your Home screen."
-    );
+    if (recallBusy) return;
+    setRecallBusy(true);
+    try {
+      await triggerDemoRecall();
+      await runRecallScan();
+      Alert.alert(
+        "Recall simulated",
+        "A notification was sent and the alert is now on your Home screen."
+      );
+    } finally {
+      setRecallBusy(false);
+    }
   };
 
   const toggleReadAloud = async (value: boolean) => {
@@ -232,9 +247,18 @@ const profile = () => {
       Alert.alert("Couldn't open link", "Please try again later.")
     );
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    router.replace("/login");
+  const logout = () => {
+    Alert.alert("Log out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          await supabase.auth.signOut();
+          router.replace("/login");
+        },
+      },
+    ]);
   };
 
   if (loading) {
@@ -353,16 +377,21 @@ const profile = () => {
         <Row
           icon="notifications-outline"
           iconColor="#dc2626"
-          label="Check for recalls now"
-          onPress={checkRecallsNow}
+          label={recallBusy ? "Checking recalls…" : "Check for recalls now"}
+          onPress={recallBusy ? undefined : checkRecallsNow}
+          last={!__DEV__}
         />
-        <Row
-          icon="flask-outline"
-          iconColor="#dc2626"
-          label="Simulate a recall (demo)"
-          onPress={simulateRecall}
-          last
-        />
+        {/* Demo-only helper for pitching the recall feature — hidden in
+            production builds so real users never see a fake recall button. */}
+        {__DEV__ && (
+          <Row
+            icon="flask-outline"
+            iconColor="#dc2626"
+            label="Simulate a recall (demo)"
+            onPress={recallBusy ? undefined : simulateRecall}
+            last
+          />
+        )}
       </Card>
 
       {/* Account */}

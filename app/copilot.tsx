@@ -113,7 +113,9 @@ const Copilot = () => {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#f9fafb" }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      // "height" on Android — with behavior undefined the keyboard covers the
+      // input bar on devices where windowSoftInputMode isn't adjustResize.
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
     >
       {/* Sub-header: who the co-pilot is advising */}

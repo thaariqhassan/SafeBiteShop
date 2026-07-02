@@ -98,7 +98,7 @@ const QuestionsComp2 = ({
   return (
     <View className="mt-5">
       <SText className="font-semibold text-lg">{question.text}</SText>
-      <View className="flex-row gap-2">
+      <View className="flex-row flex-wrap gap-2">
         {common.map((c) => singleAnswer(c, value, change))}
       </View>
     </View>
@@ -140,7 +140,21 @@ const onboarding = () => {
   >();
   const [selectedMedications, setSelectedMedications] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   async function handleSubmit() {
+    if (saving) return;
+    // The whole app keys off this profile — require at least the basics so a
+    // stray tap on Save can't create an empty profile.
+    if (!selectedAgeGroup) {
+      setError("Please select your age group before saving.");
+      return;
+    }
+    if (selectedAllergies.length === 0) {
+      setError('Please answer the allergy question — choose "None" if you have no allergies.');
+      return;
+    }
+    setError("");
+    setSaving(true);
     const { error } = await setOnboardingDetails({
       details: {
         allergies: selectedAllergies,
@@ -151,8 +165,9 @@ const onboarding = () => {
         allergy_severity: selectedAllergySeverity,
       },
     });
+    setSaving(false);
     if (error) {
-      setError("Please try again");
+      setError("Couldn't save your details. Please try again.");
       return;
     }
     router.replace("/home");
@@ -213,13 +228,16 @@ const onboarding = () => {
           common={["0-12", "13-19", "20-35", "36-50", "51+"]}
           change={setSelectedAgeGroup}
         />
-        {error && <Text className="text-red-600">{error}</Text>}
+        {error && <Text className="text-red-600 mt-4">{error}</Text>}
         <TouchableOpacity
-          className="flex-1 p-2 rounded-md bg-green-700 align-center py-2 h-14 justify-center mt-10"
+          className={`flex-1 p-2 rounded-md py-2 h-14 justify-center mt-10 ${
+            saving ? "bg-green-900" : "bg-green-700"
+          }`}
           onPress={handleSubmit}
+          disabled={saving}
         >
           <Text className="text-white text-xl font-bold text-center w-full py-2 z-10">
-            Save
+            {saving ? "Saving…" : "Save"}
           </Text>
         </TouchableOpacity>
       </ScrollView>
